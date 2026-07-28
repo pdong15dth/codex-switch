@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/*
+ * Deep blue-black canvas, panels a step lighter, one vivid spring-green accent.
+ * Green always means "live / healthy"; blue, amber and red are status-only.
+ */
+@theme {
+  --color-canvas: #060a0c;
+  --color-rail: #0a0f12;
+  --color-card: #0d1417;
+  --color-raised: #141d21;
+  --color-sunken: #04080a;
+
+  --color-line: #1a2529;
+  --color-line2: #27353a;
+
+  --color-fg: #e9f1f1;
+  --color-dim: #8ea2a5;
+  --color-faint: #5c6f73;
+
+  --color-accent: #2ee0a0;
+  --color-accent2: #12805c;
+  --color-info: #4fb0e8;
+  --color-warn: #e0b64a;
+  --color-bad: #e0664a;
+  --color-lime: #c8e04a;
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-geist), ui-monospace, Consolas, monospace;
+
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Single light source, top-left, tinted with the accent. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 55% at 12% -8%, rgb(46 224 160 / 0.09), transparent 60%),
+    radial-gradient(70% 50% at 95% 8%, rgb(79 176 232 / 0.05), transparent 55%);
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every panel: soft border, faint top highlight, tinted drop shadow. */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 1.125rem;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.035) inset,
+    0 18px 40px -28px rgb(0 0 0 / 0.9);
+}
+
+/* The live account panel earns a green rim and glow. */
+.card-live {
+  border-color: color-mix(in srgb, var(--color-accent) 32%, transparent);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.05) inset,
+    0 0 60px -26px color-mix(in srgb, var(--color-accent) 60%, transparent),
+    0 18px 40px -28px rgb(0 0 0 / 0.9);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 2.4s var(--ease-spring) infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Staggered card entry — set --i per child. */
+.rise {
+  animation: rise 0.5s var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot,
+  .rise {
+    animation: none;
+  }
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-canvas),
+    0 0 0 4px color-mix(in srgb, var(--color-accent) 65%, transparent);
+  border-radius: 0.625rem;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line2) transparent;
+}
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line2);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}

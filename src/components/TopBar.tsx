@@ -1,0 +1,60 @@
+'use client'
+
+import { IconClock, IconPlus, IconRefresh } from './icons'
+import { Button } from './ui'
+
+const TITLES: Record<string, { title: string; sub: string }> = {
+  overview: { title: 'Tổng quan', sub: 'trạng thái account và lịch sử switch' },
+  accounts: { title: 'Accounts', sub: 'tất cả profile đã lưu' },
+  backups: { title: 'Backups', sub: 'mỗi lần switch tạo một bản backup' },
+  console: { title: 'Console', sub: 'chạy lệnh auth của Codex CLI' }
+}
+
+/** `now` is owned by Dashboard so every card reads the same tick. */
+export function TopBar({
+  view,
+  now,
+  busy,
+  onRefresh,
+  onSave
+}: {
+  view: string
+  now: number
+  busy: boolean
+  onRefresh: () => void
+  onSave: () => void
+}) {
+  const date = new Date(now)
+  const clock = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const weekday = date.toLocaleDateString('vi-VN', { weekday: 'short' })
+  const meta = TITLES[view] ?? TITLES.overview
+
+  return (
+    <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-6 py-4">
+        <div className="min-w-0">
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{meta.title}</h1>
+          <p className="mt-0.5 truncate text-[11.5px] text-faint">{meta.sub}</p>
+        </div>
+
+        <span className="grow" />
+
+        <Button variant="pill" onClick={onRefresh} disabled={busy} aria-label="Làm mới">
+          <IconRefresh className={`size-[14px] ${busy ? 'animate-spin' : ''}`} />
+          Làm mới
+        </Button>
+
+        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3.5 py-1.5 text-[12.5px] text-dim">
+          <IconClock className="size-[14px] text-faint" />
+          <span className="tnum">{clock}</span>
+          <span className="text-faint">{weekday}</span>
+        </span>
+
+        <Button variant="primary" onClick={onSave}>
+          <IconPlus className="size-[14px]" />
+          Lưu account
+        </Button>
+      </div>
+    </header>
+  )
+}

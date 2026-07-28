@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#131211" />
+  <!-- Two lanes with a switched-over marker: the app's whole job in one glyph. -->
+  <path
+    d="M7 11.5h11.5m0 0-3.2-3.2m3.2 3.2-3.2 3.2"
+    stroke="#5aa17f"
+    stroke-width="2.1"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <path
+    d="M25 20.5H13.5m0 0 3.2-3.2m-3.2 3.2 3.2 3.2"
+    stroke="#6f6862"
+    stroke-width="2.1"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

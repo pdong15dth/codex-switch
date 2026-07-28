@@ -1,18 +1,27 @@
 {
   "name": "codex-switch",
-  "version": "1.0.0",
-  "description": "Local web UI to save and switch between multiple Codex CLI accounts",
-  "type": "module",
-  "main": "server.js",
-  "bin": {
-    "codex-switch": "server.js"
-  },
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "start": "node server.js"
+    "dev": "next dev -H 127.0.0.1 -p 6677",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 6677",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint"
   },
-  "engines": {
-    "node": ">=18"
+  "dependencies": {
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
-  "license": "MIT",
-  "private": true
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }
