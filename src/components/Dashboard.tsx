@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
 import { AccountsCard, BackupsCard, LiveCard, QuotaCard, SummaryBar, SwitchCard } from './cards'
+import { HistoryCard } from './HistoryCard'
 import { TotpCard } from './TotpCard'
+import { UsageChartCard } from './UsageChartCard'
 import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
 import { EmptyState } from './EmptyState'
@@ -209,17 +211,29 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                   />
                   <QuotaCard live={live} now={now} index={1} />
                   <TotpCard index={2} />
+                  <UsageChartCard
+                    profiles={profiles}
+                    history={state.usageHistory}
+                    index={3}
+                    className="lg:col-span-2"
+                  />
+                  <HistoryCard
+                    profiles={profiles}
+                    backups={backups}
+                    history={state.usageHistory}
+                    index={4}
+                  />
                   <SwitchCard
                     profiles={profiles}
                     now={now}
                     busy={busy}
-                    index={3}
+                    index={5}
                     className="lg:col-span-2"
                     onSwitch={doSwitch}
                     onConfigure={setConfiguring}
                   />
-                  <BackupsCard backups={backups} index={4} />
-                  <ConsoleCard add={add} index={5} className="lg:col-span-2 xl:col-span-3" />
+                  <BackupsCard backups={backups} index={6} />
+                  <ConsoleCard add={add} index={7} className="lg:col-span-2 xl:col-span-3" />
                 </div>
               </>
             ) : view === 'accounts' ? (

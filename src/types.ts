@@ -118,6 +118,10 @@ export interface AppState {
   activeProfileIds: Record<string, string>
   /** accountKey → last quota read, kept so inactive accounts still show a figure. */
   usage?: Record<string, UsageSnapshot>
+  /** accountKey → quota readings over time, accumulated by this app. */
+  usageHistory?: Record<string, UsagePoint[]>
+  /** accountKey → why the last quota read failed, if it did. */
+  usageErrors?: Record<string, UsageError>
 }
 
 // ── View models sent to the browser ───────────────────────────────
@@ -152,6 +156,8 @@ export interface ProfileView extends Omit<Profile, 'items' | 'totp'> {
   identity: Identity | null
   /** Last quota read for this account; stale for inactive ones. */
   usage: UsageSnapshot | null
+  /** Why the last quota read failed, so the UI can say instead of showing blank. */
+  usageError: UsageError | null
 }
 
 export type ConfigItemView = ConfigItem & {
@@ -184,6 +190,24 @@ export interface UsageSnapshot {
   fetchedAt: string
 }
 
+/** Why the last quota read for an account failed. */
+export interface UsageError {
+  code: string
+  message: string
+  at: string
+}
+
+/**
+ * One recorded quota reading. The backend only ever reports "used right now",
+ * so the series has to be accumulated locally, one point per refresh.
+ */
+export interface UsagePoint {
+  /** Epoch ms. */
+  t: number
+  /** used_percent at that moment. */
+  used: number
+}
+
 /** One recorded switch — the backup folder is also the history log. */
 export interface BackupEntry {
   id: string
@@ -203,4 +227,6 @@ export interface StateView {
   profiles: ProfileView[]
   activeProfileIds: Record<string, string>
   backups: BackupEntry[]
+  /** accountKey → quota series, for the usage chart. */
+  usageHistory: Record<string, UsagePoint[]>
 }

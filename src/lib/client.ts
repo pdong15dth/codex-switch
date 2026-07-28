@@ -37,9 +37,11 @@ export const api = {
     req<{ state: StateView }>(`/api/profiles/${id}`, { method: 'DELETE' }),
 
   switchProfile: (id: string) =>
-    req<{ result: SwitchResult; state: StateView }>(`/api/profiles/${id}/switch`, {
-      method: 'POST'
-    }),
+    req<{
+      result: SwitchResult
+      refresh: { refreshed: number; failures: { label: string; message: string }[] }
+      state: StateView
+    }>(`/api/profiles/${id}/switch`, { method: 'POST' }),
 
   importCurrent: (id: string) =>
     req<{ state: StateView }>(`/api/profiles/${id}/import`, { method: 'POST' }),

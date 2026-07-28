@@ -280,11 +280,27 @@ const AVATAR_TONES = [
   'bg-bad/18 text-bad border-bad/30'
 ]
 
-export function avatarTone(name: string): string {
+/** Stable index per name, so an account keeps the same colour everywhere. */
+export function toneIndex(name: string): number {
   let sum = 0
   for (const ch of name) sum += ch.codePointAt(0) ?? 0
-  return AVATAR_TONES[sum % AVATAR_TONES.length]
+  return sum % AVATAR_TONES.length
 }
+
+export function avatarTone(name: string): string {
+  return AVATAR_TONES[toneIndex(name)]
+}
+
+/** Raw colours matching AVATAR_TONES, for charts and bars. */
+export const SERIES_COLOURS = [
+  'var(--color-accent)',
+  'var(--color-info)',
+  'var(--color-warn)',
+  'var(--color-lime)',
+  'var(--color-bad)'
+]
+
+export const seriesColour = (name: string) => SERIES_COLOURS[toneIndex(name)]
 
 /**
  * First character plus the last alphanumeric one, so acc1/acc2/acc3 read as

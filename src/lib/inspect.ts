@@ -145,7 +145,10 @@ export async function buildStateView(): Promise<StateView> {
       hasTotp: Boolean(totp?.secret),
       active: await isActive(items),
       identity,
-      usage: identity?.accountKey ? (state.usage?.[identity.accountKey] ?? null) : null
+      usage: identity?.accountKey ? (state.usage?.[identity.accountKey] ?? null) : null,
+      usageError: identity?.accountKey
+        ? (state.usageErrors?.[identity.accountKey] ?? null)
+        : null
     })
   }
 
@@ -157,7 +160,8 @@ export async function buildStateView(): Promise<StateView> {
     categories: state.categories,
     profiles,
     activeProfileIds: state.activeProfileIds,
-    backups: await listBackups()
+    backups: await listBackups(),
+    usageHistory: state.usageHistory ?? {}
   }
 }
 

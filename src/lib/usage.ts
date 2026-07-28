@@ -42,17 +42,30 @@ export function accessTokenOf(content: string): { token: string; accountId?: str
   }
 }
 
+export type UsageResult =
+  | { ok: true; snapshot: UsageSnapshot }
+  | { ok: false; code: string; message: string }
+
+/** Map the backend's error codes to something worth showing a user. */
+function explain(code: string, status: number): string {
+  if (code === 'token_revoked' || code === 'token_invalidated') {
+    return 'Token đã bị thu hồi — cần đăng nhập lại account này.'
+  }
+  if (status === 401) return 'Token hết hạn hoặc không còn hiệu lực.'
+  if (status === 403) return 'Bị từ chối (403). Có thể do Cloudflare hoặc account bị hạn chế.'
+  if (status === 429) return 'Bị giới hạn tần suất, thử lại sau.'
+  return `Đọc quota thất bại (HTTP ${status}).`
+}
+
 /**
- * Read quota for one credential. Returns null on any failure — an inactive
- * account's access token expires after an hour, and a 401 there is expected
- * rather than exceptional.
+ * Read quota for one credential. Failures are reported rather than swallowed:
+ * an empty chart is far less useful than the reason it is empty.
  */
-export async function fetchUsage(
-  content: string,
-  accountKey: string
-): Promise<UsageSnapshot | null> {
+export async function fetchUsage(content: string, accountKey: string): Promise<UsageResult> {
   const creds = accessTokenOf(content)
-  if (!creds) return null
+  if (!creds) {
+    return { ok: false, code: 'no_token', message: 'Credential này không có access token.' }
+  }
 
   try {
     const res = await fetch(USAGE_URL, {
@@ -65,10 +78,20 @@ export async function fetchUsage(
       // Do not let a hanging request stall the whole refresh.
       signal: AbortSignal.timeout(12_000)
     })
-    if (!res.ok) return null
+
+    if (!res.ok) {
+      let code = `http_${res.status}`
+      try {
+        const body = (await res.json()) as { error?: { code?: string } }
+        if (body.error?.code) code = body.error.code
+      } catch {
+        // Non-JSON error body; the status alone will have to do.
+      }
+      return { ok: false, code, message: explain(code, res.status) }
+    }
 
     const raw = (await res.json()) as RawUsage
-    return {
+    const snapshot: UsageSnapshot = {
       accountKey,
       email: raw.email ?? null,
       planType: raw.plan_type ?? null,
@@ -78,8 +101,10 @@ export async function fetchUsage(
       creditBalance: raw.credits?.balance ?? null,
       fetchedAt: new Date().toISOString()
     }
-  } catch {
-    return null
+    return { ok: true, snapshot }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, code: 'network', message: `Không gọi được API: ${message}` }
   }
 }
 
