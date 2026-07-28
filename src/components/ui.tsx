@@ -319,6 +319,41 @@ export function formatTime(iso?: string | null): string {
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
+export interface TokenState {
+  /** 0..1 of the token's own lifetime still left; null when unknown. */
+  fraction: number | null
+  text: string
+  expired: boolean
+  tone: Tone
+}
+
+/**
+ * Token health measured against the token's *own* lifetime (`exp - iat`) rather
+ * than an assumed window. OpenAI's id_token lives one hour, so a fixed 24h
+ * denominator made every healthy account look nearly dead.
+ */
+export function tokenState(
+  identity: { expiresAt?: string | null; issuedAt?: string | null } | null,
+  now: number
+): TokenState {
+  const exp = identity?.expiresAt ? new Date(identity.expiresAt).getTime() : null
+  if (!exp) return { fraction: null, text: 'không có hạn', expired: false, tone: 'neutral' }
+
+  const iat = identity?.issuedAt ? new Date(identity.issuedAt).getTime() : null
+  const lifetime = iat && exp > iat ? exp - iat : 3_600_000
+  const left = exp - now
+
+  if (left <= 0) return { fraction: 0, text: 'hết hạn', expired: true, tone: 'bad' }
+
+  const fraction = Math.max(0, Math.min(1, left / lifetime))
+  const mins = Math.floor(left / 60_000)
+  const hours = Math.floor(mins / 60)
+  const text = hours >= 1 ? `còn ${hours}h ${mins % 60}m` : `còn ${mins}m`
+  const tone: Tone = fraction > 0.33 ? 'ok' : fraction > 0.1 ? 'warn' : 'bad'
+
+  return { fraction, text, expired: false, tone }
+}
+
 /**
  * "còn 3h 12m" / "đã hết hạn" — the token countdown. `now` is passed in rather
  * than read from the clock so callers stay pure during render.

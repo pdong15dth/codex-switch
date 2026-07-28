@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
-import { AccountsCard, BackupsCard, FilesCard, LiveCard, StatsCard, TokenCard } from './cards'
+import { AccountsCard, BackupsCard, SummaryBar } from './cards'
 import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
 import { EmptyState } from './EmptyState'
@@ -15,7 +15,7 @@ import { useAddAccount } from './useAddAccount'
 // Presets are static data with no Node imports, so the client uses them
 // directly instead of round-tripping through /api/presets.
 import { BUILTIN_PRESETS } from '@/lib/presets'
-import type { ConfigItem, ProfileView, StateView, SwitchResult } from '@/types'
+import type { ConfigItem, StateView, SwitchResult } from '@/types'
 
 interface Confirmation {
   title: string
@@ -100,31 +100,12 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
       return next
     })
 
-  const deleteNewest = () => {
-    const newest = [...profiles].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
-    if (newest) askDelete(newest.id, newest.name)
-  }
-
-  const liveProps = (p: ProfileView | null) => ({
-    live: p,
-    now,
-    busy,
-    onRecapture: () => p && run(async () => (await api.importCurrent(p.id)).state),
-    onConfigure: () => p && setConfiguring(p.id),
-    onSave: () => setShowCreate(true)
-  })
-
-  const statsProps = {
-    profiles,
-    backups,
-    onAdd: () => setShowCreate(true),
-    onRemoveLast: deleteNewest
-  }
-
   const accountsProps = {
     profiles,
+    now,
     busy,
     onSwitch: doSwitch,
+    onRecapture: (id: string) => run(async () => (await api.importCurrent(id)).state),
     onConfigure: setConfiguring
   }
 
@@ -182,33 +163,24 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 <ConsoleCard add={add} index={1} />
               </div>
             ) : view === 'overview' ? (
-              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                <LiveCard {...liveProps(live)} />
-                <StatsCard {...statsProps} index={1} />
-                <TokenCard live={live} backups={backups} now={now} index={2} />
-                <AccountsCard {...accountsProps} index={3} className="lg:col-span-2" />
-                <FilesCard profiles={profiles} index={4} />
-                <ConsoleCard add={add} index={5} className="xl:col-span-2" />
-                <BackupsCard backups={backups} index={6} />
-              </div>
-            ) : view === 'accounts' ? (
-              <div className="grid gap-4 xl:grid-cols-3">
-                <AccountsCard {...accountsProps} index={0} className="xl:col-span-2" />
+              /* The table is the page. One summary line above it, the add flow
+                 below it, nothing else competing for attention. */
+              <>
+                <SummaryBar
+                  profiles={profiles}
+                  now={now}
+                  adding={add.busy}
+                  onAdd={() => add.start('codex-login')}
+                />
                 <div className="grid gap-4">
-                  <StatsCard {...statsProps} index={1} />
-                  <FilesCard profiles={profiles} index={2} />
+                  <AccountsCard {...accountsProps} index={0} />
+                  <ConsoleCard add={add} index={1} />
                 </div>
-              </div>
+              </>
             ) : view === 'backups' ? (
-              <div className="grid gap-4 xl:grid-cols-3">
-                <BackupsCard backups={backups} index={0} className="xl:col-span-2" />
-                <TokenCard live={live} backups={backups} now={now} index={1} />
-              </div>
+              <BackupsCard backups={backups} index={0} />
             ) : (
-              <div className="grid gap-4 xl:grid-cols-3">
-                <ConsoleCard add={add} index={0} className="xl:col-span-2" />
-                <LiveCard {...liveProps(live)} />
-              </div>
+              <ConsoleCard add={add} index={0} />
             )}
           </div>
         </main>

@@ -38,10 +38,15 @@ export function deriveProfileName(identityLabel: string | undefined, taken: stri
   const email = identityLabel?.match(/^([^@\s]+)@[^@\s]+$/)
   if (email) {
     const base = email[1].replace(/[^\p{L}\p{N}._-]/gu, '')
-    if (base && !used.has(base.toLowerCase())) return base
-    for (let i = 2; i < 100; i++) {
-      const candidate = `${base}-${i}`
-      if (!used.has(candidate.toLowerCase())) return candidate
+    // Skip generated-looking locals such as `skating_wander.09qxadbxon`: they
+    // make a worse label than acc1/acc2, and the email is shown alongside
+    // anyway. Anything reasonably short still wins.
+    if (base && base.length <= 14) {
+      if (!used.has(base.toLowerCase())) return base
+      for (let i = 2; i < 100; i++) {
+        const candidate = `${base}-${i}`
+        if (!used.has(candidate.toLowerCase())) return candidate
+      }
     }
   }
 

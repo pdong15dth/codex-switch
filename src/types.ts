@@ -111,9 +111,22 @@ export interface AppState {
 /** Credential summary derived from an auth file — never includes raw tokens. */
 export interface Identity {
   authMode: string
+  /**
+   * Stable per-account id (the `sub` claim, else the email). Tokens rotate, so
+   * identity — not file content — is what says two credentials are the same
+   * account.
+   */
+  accountKey?: string | null
+  /** Email when derivable, otherwise a masked key. */
   label: string
+  /** Display name from the token, when the provider includes one. */
+  displayName?: string | null
   plan?: string | null
   expiresAt?: string | null
+  /** Token issue time, so the real lifetime is known instead of assumed. */
+  issuedAt?: string | null
+  /** When the CLI last refreshed this credential. */
+  lastRefresh?: string | null
 }
 
 export interface ProfileView extends Omit<Profile, 'items'> {

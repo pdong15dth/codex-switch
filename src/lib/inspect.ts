@@ -3,8 +3,8 @@ import { platform } from 'node:os'
 import { DATA_DIR, HOME, resolvePath } from './paths'
 import { describeAuth } from './identity'
 import { listBackups } from './backups'
-import { loadState } from './storage'
-import type { ConfigItemView, Profile, ProfileView, StateView } from '@/types'
+import { loadState, saveState } from './storage'
+import type { AppState, ConfigItemView, Profile, ProfileView, StateView } from '@/types'
 
 async function readIfPresent(path: string): Promise<string | null> {
   try {
@@ -58,14 +58,28 @@ async function buildItemViews(profile: Profile): Promise<ConfigItemView[]> {
 }
 
 /**
- * A profile counts as active when every enabled file-replace item's captured
- * content is byte-identical to what is on disk. Derived from disk rather than
- * stored, so it stays correct even when the user logs in via the CLI directly.
+ * A profile is active when the credential on disk belongs to its account.
+ *
+ * Identity first, bytes second: a token that refreshed a second ago is still the
+ * same account, and `syncLiveCredentials` will have adopted it anyway.
  */
-function isActive(items: ConfigItemView[]): boolean {
+async function isActive(items: ConfigItemView[]): Promise<boolean> {
   const relevant = items.filter((i) => i.enabled && i.type === 'file-replace')
   if (!relevant.length) return false
-  return relevant.every((i) => i.matchesDisk)
+
+  for (const item of relevant) {
+    if (item.type !== 'file-replace' || !item.content) return false
+
+    const live = await readIfPresent(resolvePath(item.targetPath))
+    if (live === null) return false
+    if (live === item.content) continue
+
+    const liveKey = describeAuth(live)?.accountKey
+    const storedKey = describeAuth(item.content)?.accountKey
+    if (!liveKey || liveKey !== storedKey) return false
+  }
+
+  return true
 }
 
 /** Identity comes from the first enabled file item that parses as a credential. */
@@ -78,8 +92,46 @@ function deriveIdentity(items: ConfigItemView[]) {
   return null
 }
 
+/**
+ * Keep each profile's snapshot current for the account it belongs to.
+ *
+ * OpenAI rotates the refresh token on every refresh: once the CLI refreshes, the
+ * previous pair is revoked. A frozen snapshot therefore rots, and switching back
+ * to it later restores a revoked credential — the account then has to be logged
+ * in again. So whenever the live file holds the *same account* as a stored
+ * snapshot but different bytes, adopt the live bytes.
+ *
+ * Matching is by account identity (`sub` / email), never by content, precisely
+ * because the content is what changes.
+ */
+async function syncLiveCredentials(state: AppState): Promise<boolean> {
+  let changed = false
+
+  for (const profile of state.profiles) {
+    for (const item of profile.items) {
+      if (item.type !== 'file-replace' || !item.enabled || !item.content) continue
+
+      const live = await readIfPresent(resolvePath(item.targetPath))
+      if (live === null || live === item.content) continue
+
+      const liveKey = describeAuth(live)?.accountKey
+      const storedKey = describeAuth(item.content)?.accountKey
+      if (!liveKey || liveKey !== storedKey) continue
+
+      item.content = live
+      profile.updatedAt = new Date().toISOString()
+      changed = true
+    }
+  }
+
+  return changed
+}
+
 export async function buildStateView(): Promise<StateView> {
   const state = await loadState()
+  // Runs on every read so a refresh is picked up within one poll interval.
+  if (await syncLiveCredentials(state)) await saveState(state)
+
   const profiles: ProfileView[] = []
 
   for (const profile of state.profiles) {
@@ -87,7 +139,7 @@ export async function buildStateView(): Promise<StateView> {
     profiles.push({
       ...profile,
       items,
-      active: isActive(items),
+      active: await isActive(items),
       identity: deriveIdentity(items)
     })
   }

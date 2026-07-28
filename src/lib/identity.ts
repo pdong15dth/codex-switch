@@ -5,12 +5,18 @@ interface AuthFile {
   auth_mode?: string
   OPENAI_API_KEY?: string | null
   tokens?: { id_token?: string; account_id?: string }
+  last_refresh?: string
   claudeAiOauth?: { subscriptionType?: string; expiresAt?: number }
   oauthAccount?: { emailAddress?: string }
 }
 
 interface IdTokenClaims {
+  /** Subject: stable per-account identifier. */
+  sub?: string
   email?: string
+  name?: string
+  /** Issued-at, so the token's real lifetime can be measured. */
+  iat?: number
   exp?: number
   'https://api.openai.com/auth'?: { chatgpt_plan_type?: string; chatgpt_account_id?: string }
   'https://api.openai.com/profile'?: { email?: string }
@@ -57,9 +63,13 @@ export function describeAuth(content: string): Identity | null {
     const email = claims.email ?? profile.email
     return {
       authMode: 'chatgpt',
+      accountKey: claims.sub ?? email ?? accountId ?? null,
       label: email || (accountId ? `account ${accountId.slice(0, 8)}…` : 'ChatGPT account'),
+      displayName: claims.name ?? null,
       plan: auth.chatgpt_plan_type ?? null,
-      expiresAt: claims.exp ? new Date(claims.exp * 1000).toISOString() : null
+      expiresAt: claims.exp ? new Date(claims.exp * 1000).toISOString() : null,
+      issuedAt: claims.iat ? new Date(claims.iat * 1000).toISOString() : null,
+      lastRefresh: data.last_refresh ?? null
     }
   }
 
@@ -67,6 +77,8 @@ export function describeAuth(content: string): Identity | null {
   if (data.OPENAI_API_KEY) {
     return {
       authMode: data.auth_mode ?? 'apikey',
+      // A key never rotates, so it identifies itself.
+      accountKey: data.OPENAI_API_KEY,
       label: mask(data.OPENAI_API_KEY),
       plan: null,
       expiresAt: null
@@ -78,6 +90,7 @@ export function describeAuth(content: string): Identity | null {
     const { subscriptionType, expiresAt } = data.claudeAiOauth
     return {
       authMode: 'claude-oauth',
+      accountKey: subscriptionType ? `claude:${subscriptionType}` : 'claude',
       label: subscriptionType ? `Claude ${subscriptionType}` : 'Claude account',
       plan: subscriptionType ?? null,
       expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
@@ -88,11 +101,18 @@ export function describeAuth(content: string): Identity | null {
   if (data.oauthAccount) {
     return {
       authMode: 'claude-account',
+      accountKey: data.oauthAccount.emailAddress ?? null,
       label: data.oauthAccount.emailAddress || 'Claude account',
       plan: null,
       expiresAt: null
     }
   }
 
-  return { authMode: data.auth_mode ?? 'unknown', label: '—', plan: null, expiresAt: null }
+  return {
+    authMode: data.auth_mode ?? 'unknown',
+    accountKey: null,
+    label: '—',
+    plan: null,
+    expiresAt: null
+  }
 }

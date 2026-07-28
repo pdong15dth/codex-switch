@@ -4,10 +4,9 @@ import { IconClock, IconPlus, IconRefresh } from './icons'
 import { Button } from './ui'
 
 const TITLES: Record<string, { title: string; sub: string }> = {
-  overview: { title: 'Tổng quan', sub: 'trạng thái account và lịch sử switch' },
-  accounts: { title: 'Accounts', sub: 'tất cả profile đã lưu' },
+  overview: { title: 'Tổng quan', sub: 'account nào đang dùng, token còn bao lâu' },
   backups: { title: 'Backups', sub: 'mỗi lần switch tạo một bản backup' },
-  console: { title: 'Console', sub: 'chạy lệnh auth của Codex CLI' }
+  console: { title: 'Thêm account', sub: 'login bằng Codex CLI rồi lưu thành profile' }
 }
 
 /** `now` is owned by Dashboard so every card reads the same tick. */

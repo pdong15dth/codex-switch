@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  IconAccounts,
   IconArchive,
   IconChevron,
   IconKey,
@@ -12,13 +11,13 @@ import {
 import { Avatar } from './ui'
 import type { Category, ProfileView } from '@/types'
 
-export type View = 'overview' | 'accounts' | 'backups' | 'console'
+export type View = 'overview' | 'backups' | 'console'
 
+// No separate "Accounts" entry: the accounts table *is* the overview.
 const MAIN: { id: View; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'overview', label: 'Tổng quan', Icon: IconOverview },
-  { id: 'accounts', label: 'Accounts', Icon: IconAccounts },
   { id: 'backups', label: 'Backups', Icon: IconArchive },
-  { id: 'console', label: 'Console', Icon: IconTerminal }
+  { id: 'console', label: 'Thêm account', Icon: IconTerminal }
 ]
 
 function NavItem({
@@ -128,7 +127,7 @@ export function Rail({
               label={label}
               active={view === id}
               collapsed={collapsed}
-              count={id === 'accounts' ? profiles.length : undefined}
+              count={id === 'overview' ? profiles.length : undefined}
               onClick={() => onView(id)}
             >
               <Icon className="size-[17px]" />
