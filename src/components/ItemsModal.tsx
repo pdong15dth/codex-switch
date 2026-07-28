@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Button, Input, Modal, Pill, Select } from './ui'
+import { Button, Input, Modal, Pill } from './ui'
+import { Dropdown } from './Dropdown'
 import type { ConfigItem, ConfigItemView, ProfileView } from '@/types'
 
 const TYPE_LABEL: Record<ConfigItem['type'], string> = {
@@ -9,6 +10,12 @@ const TYPE_LABEL: Record<ConfigItem['type'], string> = {
   'env-var': 'env',
   'run-command': 'cmd'
 }
+
+const ITEM_TYPES: { value: ConfigItem['type']; label: string; hint: string }[] = [
+  { value: 'file-replace', label: 'file-replace', hint: 'ghi nội dung đã lưu vào một file' },
+  { value: 'env-var', label: 'env-var', hint: 'đặt biến môi trường trong file shell' },
+  { value: 'run-command', label: 'run-command', hint: 'chạy một lệnh khi switch' }
+]
 
 /** Drop the disk-derived view fields before persisting an item. */
 function toConfigItem(view: ConfigItemView): ConfigItem {
@@ -225,14 +232,13 @@ export function ItemsModal({
           </ul>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Select
+            <Dropdown
               value={addType}
-              onChange={(e) => setAddType(e.target.value as ConfigItem['type'])}
-            >
-              <option value="file-replace">file-replace</option>
-              <option value="env-var">env-var</option>
-              <option value="run-command">run-command</option>
-            </Select>
+              options={ITEM_TYPES}
+              onChange={setAddType}
+              ariaLabel="Loại config item"
+              className="w-[168px]"
+            />
             <Button onClick={addItem}>+ Thêm item</Button>
             <span className="grow" />
             <Button onClick={onImport} disabled={busy}>

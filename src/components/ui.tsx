@@ -56,21 +56,6 @@ export function SearchInput({
   )
 }
 
-export function Select({
-  className = '',
-  children,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={`cursor-pointer rounded-lg border border-line bg-sunken px-3 py-2 text-sm transition-colors duration-200 outline-none hover:border-line2 focus:border-accent/60 ${className}`}
-    >
-      {children}
-    </select>
-  )
-}
-
 type Tone = 'neutral' | 'ok' | 'info' | 'warn' | 'bad'
 
 const TONES: Record<Tone, string> = {

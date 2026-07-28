@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Button, Input, Label, Modal, Select } from './ui'
+import { Button, Input, Label, Modal } from './ui'
+import { Dropdown } from './Dropdown'
 import type { Category, Preset } from '@/types'
 
 export function CreateProfileDialog({
@@ -58,13 +59,13 @@ export function CreateProfileDialog({
           </div>
           <div>
             <Label>Category</Label>
-            <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+            <Dropdown
+              value={categoryId}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              onChange={setCategoryId}
+              ariaLabel="Category"
+              className="min-w-[160px]"
+            />
           </div>
         </div>
 
