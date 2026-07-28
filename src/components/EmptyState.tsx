@@ -5,36 +5,25 @@ import { Button, Card } from './ui'
 
 const STEPS = [
   {
-    title: 'Đăng nhập account đầu tiên',
-    body: (
-      <>
-        Ở card <b className="font-medium text-fg">Codex CLI</b> bên phải, bấm{' '}
-        <b className="font-medium text-fg">Login (browser)</b>.
-      </>
-    )
+    title: 'Bấm “Login & lưu profile”',
+    body: 'Tool chạy codex login và mở browser cho bạn.'
   },
   {
-    title: 'Lưu nó thành profile',
+    title: 'Xác nhận trong browser',
+    body: 'Bạn đăng nhập account của mình ở đó — đây là bước duy nhất bạn phải làm tay.'
+  },
+  {
+    title: 'Profile được lưu tự động',
     body: (
       <>
-        Bấm <b className="font-medium text-fg">Lưu account</b>, chọn preset{' '}
-        <b className="font-medium text-fg">Codex CLI</b>, đặt tên{' '}
-        <code className="font-mono text-fg">acc1</code>.
+        Tool đọc credential vừa ghi ra và tự đặt tên profile theo email trong token — không cần
+        điền gì thêm.
       </>
     )
   },
   {
     title: 'Lặp lại cho các account còn lại',
-    body: (
-      <>
-        Đăng nhập account tiếp theo rồi lưu thành <code className="font-mono text-fg">acc2</code>,{' '}
-        <code className="font-mono text-fg">acc3</code>.
-      </>
-    )
-  },
-  {
-    title: 'Đổi account bằng một click',
-    body: 'Từ đó bảng Accounts sẽ hiện nút đổi sang cho từng account.'
+    body: 'Mỗi lần bấm lại là thêm một account. Sau đó đổi qua lại bằng một click.'
   }
 ]
 
@@ -45,10 +34,12 @@ const STEPS = [
 export function EmptyState({
   toolName,
   onSave,
+  busy,
   className = ''
 }: {
   toolName: string
   onSave: () => void
+  busy: boolean
   className?: string
 }) {
   return (
@@ -89,10 +80,16 @@ export function EmptyState({
             ))}
           </ol>
 
-          <Button variant="primary" className="mt-7" onClick={onSave}>
-            Lưu account đang đăng nhập
+          <Button variant="primary" className="mt-7" onClick={onSave} disabled={busy}>
+            <IconKey className="size-[14px]" />
+            Login &amp; lưu profile
             <IconArrowRight className="size-[14px]" />
           </Button>
+          <p className="mt-3 text-[12px] text-faint">
+            Đã đăng nhập bằng <code className="font-mono">codex</code> ở terminal rồi? Bấm nút này
+            vẫn được — hoặc dùng <b className="font-medium text-dim">Status</b> ở card bên phải để
+            kiểm tra.
+          </p>
         </div>
       </div>
     </Card>

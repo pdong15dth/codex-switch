@@ -15,14 +15,16 @@ export function TopBar({
   view,
   now,
   busy,
+  adding,
   onRefresh,
-  onSave
+  onAdd
 }: {
   view: string
   now: number
   busy: boolean
+  adding: boolean
   onRefresh: () => void
-  onSave: () => void
+  onAdd: () => void
 }) {
   const date = new Date(now)
   const clock = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
@@ -54,9 +56,9 @@ export function TopBar({
           <span className="text-faint">{weekday}</span>
         </span>
 
-        <Button variant="primary" onClick={onSave}>
+        <Button variant="primary" onClick={onAdd} disabled={adding}>
           <IconPlus className="size-[14px]" />
-          Lưu account
+          Thêm account
         </Button>
       </div>
     </header>

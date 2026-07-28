@@ -44,6 +44,13 @@ export const api = {
   importCurrent: (id: string) =>
     req<{ state: StateView }>(`/api/profiles/${id}/import`, { method: 'POST' }),
 
+  /** Save whoever is logged in right now, auto-named from the credential. */
+  captureAccount: (body: { categoryId: string; presetId: string }) =>
+    req<{ profile?: { name: string }; duplicate?: string; state: StateView }>(
+      '/api/accounts/capture',
+      { method: 'POST', ...json(body) }
+    ),
+
   startJob: (action: string) =>
     req<{ jobId: string; command: string }>('/api/jobs', { method: 'POST', ...json({ action }) }),
 

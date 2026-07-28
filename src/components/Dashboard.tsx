@@ -11,6 +11,7 @@ import { Rail, type View } from './Rail'
 import { SwitchResultDialog } from './SwitchResultDialog'
 import { TopBar } from './TopBar'
 import { Button, ConfirmDialog, ErrorBar, Input, Modal } from './ui'
+import { useAddAccount } from './useAddAccount'
 // Presets are static data with no Node imports, so the client uses them
 // directly instead of round-tripping through /api/presets.
 import { BUILTIN_PRESETS } from '@/lib/presets'
@@ -127,6 +128,13 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
     onConfigure: setConfiguring
   }
 
+  // Drives login -> browser confirmation -> auto-capture for the active tool.
+  const add = useAddAccount({
+    categoryId: category?.id ?? '',
+    presetId: category?.name === 'Claude Code' ? 'claude-code' : 'codex-cli',
+    onState: setState
+  })
+
   return (
     // App shell: the page itself never scrolls, only the content region does, so
     // the rail stays fully visible.
@@ -149,8 +157,9 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
           view={view}
           now={now}
           busy={busy}
+          adding={add.busy}
           onRefresh={refresh}
-          onSave={() => setShowCreate(true)}
+          onAdd={() => add.start('codex-login')}
         />
 
         <main id="main" className="px-6 py-6">
@@ -166,10 +175,11 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
               <div className="grid gap-4 xl:grid-cols-3">
                 <EmptyState
                   toolName={category?.name ?? ''}
-                  onSave={() => setShowCreate(true)}
+                  onSave={() => add.start('codex-login')}
+                  busy={add.busy}
                   className="xl:col-span-2"
                 />
-                <ConsoleCard onFinished={refresh} index={1} />
+                <ConsoleCard add={add} index={1} />
               </div>
             ) : view === 'overview' ? (
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -178,7 +188,7 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 <TokenCard live={live} backups={backups} now={now} index={2} />
                 <AccountsCard {...accountsProps} index={3} className="lg:col-span-2" />
                 <FilesCard profiles={profiles} index={4} />
-                <ConsoleCard onFinished={refresh} index={5} className="xl:col-span-2" />
+                <ConsoleCard add={add} index={5} className="xl:col-span-2" />
                 <BackupsCard backups={backups} index={6} />
               </div>
             ) : view === 'accounts' ? (
@@ -196,7 +206,7 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
               </div>
             ) : (
               <div className="grid gap-4 xl:grid-cols-3">
-                <ConsoleCard onFinished={refresh} index={0} className="xl:col-span-2" />
+                <ConsoleCard add={add} index={0} className="xl:col-span-2" />
                 <LiveCard {...liveProps(live)} />
               </div>
             )}
