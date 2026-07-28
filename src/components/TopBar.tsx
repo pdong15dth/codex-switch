@@ -30,7 +30,11 @@ export function TopBar({
   const meta = TITLES[view] ?? TITLES.overview
 
   return (
-    <header className="shrink-0 border-b border-line bg-canvas/85 backdrop-blur-md">
+    // Sticky inside the scroll container rather than a sibling above it, so the
+    // header and the cards share one content width even when a scrollbar shows.
+    <header className="sticky top-0 z-20 border-b border-line bg-canvas/92 backdrop-blur-md">
+      {/* Same horizontal padding as the content grid, so the controls line up
+          with the right edge of the cards below. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-6 py-4">
         <div className="min-w-0">
           <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{meta.title}</h1>

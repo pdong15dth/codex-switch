@@ -61,6 +61,41 @@ export function Donut({
  * Area chart with the reference's green→lime gradient. Takes raw counts and
  * renders a smooth-ish polyline; flat input still produces a readable baseline.
  */
+/**
+ * Daily counts are sparse and spiky — one tall day next to a run of zeros — so
+ * bars read them correctly where a smoothed area turns into a single spike
+ * jammed against the edge.
+ */
+export function Bars({
+  points,
+  height = 76,
+  labels
+}: {
+  points: number[]
+  height?: number
+  labels?: string[]
+}) {
+  const max = Math.max(1, ...points)
+
+  return (
+    <div className="flex items-end gap-[3px]" style={{ height }}>
+      {points.map((p, i) => (
+        <div
+          key={i}
+          title={labels?.[i] ? `${labels[i]}: ${p}` : `${p} lần switch`}
+          style={{
+            height: p ? `${Math.max(8, (p / max) * 100)}%` : '3px',
+            background: p
+              ? 'linear-gradient(to top, var(--color-accent2), var(--color-accent))'
+              : 'var(--color-line)'
+          }}
+          className="flex-1 rounded-[3px] transition-[height] duration-500 ease-[var(--ease-spring)]"
+        />
+      ))}
+    </div>
+  )
+}
+
 export function Area({ points, height = 74 }: { points: number[]; height?: number }) {
   const w = 300
   const max = Math.max(1, ...points)

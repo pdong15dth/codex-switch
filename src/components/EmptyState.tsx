@@ -42,9 +42,17 @@ const STEPS = [
  * Shown when a tool group has no profiles yet. A fresh install rendering six
  * zero-value widgets reads as broken, so replace the grid entirely.
  */
-export function EmptyState({ toolName, onSave }: { toolName: string; onSave: () => void }) {
+export function EmptyState({
+  toolName,
+  onSave,
+  className = ''
+}: {
+  toolName: string
+  onSave: () => void
+  className?: string
+}) {
   return (
-    <Card className="overflow-hidden p-7 sm:p-9" index={0}>
+    <Card className={`overflow-hidden p-7 sm:p-9 ${className}`} index={0}>
       <div className="relative">
         <div className="pointer-events-none absolute -top-16 -left-10 size-56 rounded-full bg-accent/10 blur-3xl" />
 

@@ -144,7 +144,7 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
         onToggle={() => setCollapsed(!collapsed)}
       />
 
-      <div className="flex min-w-0 grow flex-col overflow-hidden">
+      <div className="min-w-0 grow overflow-y-auto">
         <TopBar
           view={view}
           now={now}
@@ -153,8 +153,8 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
           onSave={() => setShowCreate(true)}
         />
 
-        <main id="main" className="grow overflow-y-auto px-6 py-6">
-          <div className="mx-auto max-w-[1440px]">
+        <main id="main" className="px-6 py-6">
+          <div>
             {error && (
               <div className="mb-5">
                 <ErrorBar message={error} onDismiss={() => setError('')} />
@@ -163,17 +163,16 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
 
             {profiles.length === 0 ? (
               /* Nothing saved yet: onboarding rather than six zero-value widgets. */
-              <div className="grid items-start gap-4 xl:grid-cols-3">
-                <div className="xl:col-span-2">
-                  <EmptyState
-                    toolName={category?.name ?? ''}
-                    onSave={() => setShowCreate(true)}
-                  />
-                </div>
+              <div className="grid gap-4 xl:grid-cols-3">
+                <EmptyState
+                  toolName={category?.name ?? ''}
+                  onSave={() => setShowCreate(true)}
+                  className="xl:col-span-2"
+                />
                 <ConsoleCard onFinished={refresh} index={1} />
               </div>
             ) : view === 'overview' ? (
-              <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 <LiveCard {...liveProps(live)} />
                 <StatsCard {...statsProps} index={1} />
                 <TokenCard live={live} backups={backups} now={now} index={2} />
@@ -183,20 +182,20 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 <BackupsCard backups={backups} index={6} />
               </div>
             ) : view === 'accounts' ? (
-              <div className="grid items-start gap-4 xl:grid-cols-3">
+              <div className="grid gap-4 xl:grid-cols-3">
                 <AccountsCard {...accountsProps} index={0} className="xl:col-span-2" />
-                <div className="grid items-start gap-4">
+                <div className="grid gap-4">
                   <StatsCard {...statsProps} index={1} />
                   <FilesCard profiles={profiles} index={2} />
                 </div>
               </div>
             ) : view === 'backups' ? (
-              <div className="grid items-start gap-4 xl:grid-cols-3">
+              <div className="grid gap-4 xl:grid-cols-3">
                 <BackupsCard backups={backups} index={0} className="xl:col-span-2" />
                 <TokenCard live={live} backups={backups} now={now} index={1} />
               </div>
             ) : (
-              <div className="grid items-start gap-4 xl:grid-cols-3">
+              <div className="grid gap-4 xl:grid-cols-3">
                 <ConsoleCard onFinished={refresh} index={0} className="xl:col-span-2" />
                 <LiveCard {...liveProps(live)} />
               </div>

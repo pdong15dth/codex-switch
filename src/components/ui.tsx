@@ -119,8 +119,10 @@ export function Card({
   children: ReactNode
 }) {
   return (
+    // Flex column so cards can stretch to their grid row height and still push
+    // their footer content to the bottom rather than leaving a void.
     <section
-      className={`rise ${live ? 'card-live' : 'card'} ${className}`}
+      className={`rise flex flex-col ${live ? 'card-live' : 'card'} ${className}`}
       style={{ ['--i' as string]: index }}
     >
       {children}

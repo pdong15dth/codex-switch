@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Area, Donut, SegmentBar, type Segment } from './charts'
+import { Bars, Donut, SegmentBar, type Segment } from './charts'
 import {
   IconAlert,
   IconArchive,
@@ -130,7 +130,8 @@ export function LiveCard({
         ))}
       </dl>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      {/* Pinned to the bottom so action rows line up across a stretched row. */}
+      <div className="mt-auto flex flex-wrap gap-2 pt-5">
         <Button onClick={onRecapture} disabled={busy}>
           Cập nhật snapshot
         </Button>
@@ -190,7 +191,7 @@ export function StatsCard({
       </div>
 
       {/* Overlapping avatar cluster with the reference's +/− pair. */}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-auto flex items-center justify-between gap-3 pt-4">
         <div className="flex items-center">
           {profiles.slice(0, 5).map((p, i) => (
             <span
@@ -307,13 +308,13 @@ export function TokenCard({
 
       {/* An all-zero chart is a void, not information — say so instead. */}
       {backups.length === 0 ? (
-        <p className="mt-4 border-t border-line pt-3 text-[12px] text-faint">
+        <p className="mt-auto border-t border-line pt-3 text-[12px] text-faint">
           Chưa có lần switch nào để vẽ biểu đồ.
         </p>
       ) : (
-        <div className="mt-4 border-t border-line pt-3">
-          <Area points={series} />
-          <div className="mt-1.5 flex justify-between text-[10.5px] text-faint">
+        <div className="mt-auto border-t border-line pt-4">
+          <Bars points={series} />
+          <div className="mt-2 flex justify-between text-[10.5px] text-faint">
             <span>14 ngày trước</span>
             <span>hôm nay</span>
           </div>
@@ -356,7 +357,8 @@ export function FilesCard({ profiles, index }: { profiles: ProfileView[]; index:
         sub="trạng thái so với đĩa"
         right={<Chip>{total}</Chip>}
       />
-      <div className="mt-5">
+      {/* Centred in whatever height the row gives this card. */}
+      <div className="flex grow flex-col justify-center pt-5">
         <SegmentBar segments={segments} />
       </div>
     </Card>
@@ -424,7 +426,7 @@ export function AccountsCard({
         />
       </div>
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-4 grow overflow-x-auto">
         <table className="w-full min-w-[520px] border-collapse text-left">
           <thead>
             <tr className="text-[10.5px] tracking-[0.1em] text-faint uppercase">
@@ -528,11 +530,11 @@ export function BackupsCard({
       />
 
       {backups.length === 0 ? (
-        <p className="mt-5 rounded-xl border border-dashed border-line px-4 py-6 text-center text-[13px] text-faint">
+        <p className="mt-5 grow rounded-xl border border-dashed border-line px-4 py-6 text-center text-[13px] text-faint">
           Chưa có lần switch nào.
         </p>
       ) : (
-        <ul className="mt-4 divide-y divide-line/70">
+        <ul className="mt-4 grow divide-y divide-line/70">
           {backups.slice(0, 12).map((b) => (
             <li key={b.id} className="flex items-center gap-3 py-2.5">
               <IconArchive className="size-[15px] shrink-0 text-faint" />
