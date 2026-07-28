@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
-import { AccountCard } from './AccountCard'
-import { AccountsCard, BackupsCard, SummaryBar } from './cards'
+import { AccountsCard, BackupsCard, LiveCard, QuotaCard, SummaryBar, SwitchCard } from './cards'
+import { TotpCard } from './TotpCard'
 import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
 import { EmptyState } from './EmptyState'
@@ -186,7 +186,8 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 <ConsoleCard add={add} index={1} />
               </div>
             ) : view === 'overview' ? (
-              /* One card per account: quota, reset countdown, one-click switch. */
+              /* Mixed card grid: live account, quota gauge, quick switch, 2FA,
+                 add-account and backups. */
               <>
                 <SummaryBar
                   profiles={profiles}
@@ -194,22 +195,31 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                   adding={add.busy}
                   onAdd={() => add.start('codex-login')}
                 />
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {profiles.map((p, i) => (
-                    <AccountCard
-                      key={p.id}
-                      profile={p}
-                      now={now}
-                      busy={busy}
-                      index={i}
-                      onSwitch={() => doSwitch(p.id)}
-                      onRecapture={() =>
-                        run(async () => (await api.importCurrent(p.id)).state)
-                      }
-                      onConfigure={() => setConfiguring(p.id)}
-                    />
-                  ))}
-                  <ConsoleCard add={add} index={profiles.length} />
+                <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                  <LiveCard
+                    live={live}
+                    now={now}
+                    busy={busy}
+                    index={0}
+                    onRecapture={() =>
+                      live && run(async () => (await api.importCurrent(live.id)).state)
+                    }
+                    onConfigure={() => live && setConfiguring(live.id)}
+                    onAdd={() => add.start('codex-login')}
+                  />
+                  <QuotaCard live={live} now={now} index={1} />
+                  <TotpCard index={2} />
+                  <SwitchCard
+                    profiles={profiles}
+                    now={now}
+                    busy={busy}
+                    index={3}
+                    className="lg:col-span-2"
+                    onSwitch={doSwitch}
+                    onConfigure={setConfiguring}
+                  />
+                  <BackupsCard backups={backups} index={4} />
+                  <ConsoleCard add={add} index={5} className="lg:col-span-2 xl:col-span-3" />
                 </div>
               </>
             ) : view === 'accounts' ? (

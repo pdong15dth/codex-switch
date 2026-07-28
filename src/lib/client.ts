@@ -51,6 +51,13 @@ export const api = {
       { method: 'POST', ...json(body) }
     ),
 
+  /** One-off OTP from a pasted secret. Nothing is stored server-side. */
+  otp: (secret: string) =>
+    req<{ code: string; expiresAt: number; period: number }>('/api/totp', {
+      method: 'POST',
+      ...json({ secret })
+    }),
+
   /** Current 2FA code for a profile. The secret stays on the server. */
   totpCode: (id: string) =>
     req<{ code: string; expiresAt: number; period: number }>(`/api/profiles/${id}/totp`),
