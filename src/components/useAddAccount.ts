@@ -6,12 +6,36 @@ import type { StateView } from '@/types'
 
 export type Phase = 'idle' | 'running' | 'capturing' | 'done' | 'error'
 
+/** Device-code prompt parsed out of the CLI output. */
+export interface DevicePrompt {
+  url: string
+  code: string
+}
+
+/**
+ * `codex login --device-auth` prints a verification URL and a one-time code.
+ * Pull them out so the UI can show them properly instead of making the user
+ * read raw terminal output.
+ */
+function parseDevicePrompt(lines: string[]): DevicePrompt | null {
+  const text = lines.join('\n')
+  const url = text.match(/https:\/\/\S*device\S*/)?.[0]
+  const code = text.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4,6}\b/)?.[0]
+  return url && code ? { url, code } : null
+}
+
 export interface AddAccount {
   phase: Phase
   /** Human-readable status for the current phase. */
   message: string
   command: string
   lines: string[]
+  /** Set once the CLI has printed a device-code prompt. */
+  device: DevicePrompt | null
+  /** Name of the browser opened privately, if the tool managed to open one. */
+  openedIn: string
+  /** Re-open the verification URL in a fresh private window. */
+  reopen: () => void
   /** True while a codex process is running, so buttons can disable. */
   busy: boolean
   /** Full flow: log in, wait for the browser confirmation, then save. */
@@ -45,8 +69,19 @@ export function useAddAccount({
   const [command, setCommand] = useState('')
   const [lines, setLines] = useState<string[]>([])
   const [jobId, setJobId] = useState<string | null>(null)
+  const [openedIn, setOpenedIn] = useState('')
   // Whether finishing the job should capture a profile, or just report.
   const captureAfter = useRef(false)
+  // The device URL we already auto-opened, so a poll tick cannot open it twice.
+  const opened = useRef('')
+
+  const openUrl = useCallback((url: string) => {
+    opened.current = url
+    api.openPrivate(url).then(
+      (r) => setOpenedIn(r.browser),
+      () => setOpenedIn('')
+    )
+  }, [])
 
   const capture = useCallback(async () => {
     setPhase('capturing')
@@ -73,6 +108,12 @@ export function useAddAccount({
       try {
         const job = await api.job(jobId)
         setLines(job.lines)
+
+        // As soon as the CLI prints the device prompt, open it in a private
+        // window so the login starts from a clean session.
+        const prompt = parseDevicePrompt(job.lines)
+        if (prompt && opened.current !== prompt.url) openUrl(prompt.url)
+
         if (!job.done) return
         clearInterval(timer)
         setJobId(null)
@@ -94,15 +135,17 @@ export function useAddAccount({
       }
     }, 700)
     return () => clearInterval(timer)
-  }, [jobId, phase, capture])
+  }, [jobId, phase, capture, openUrl])
 
   const launch = useCallback(async (action: string, withCapture: boolean) => {
     captureAfter.current = withCapture
+    opened.current = ''
+    setOpenedIn('')
     setLines([])
     setPhase('running')
     setMessage(
       withCapture
-        ? 'Đang chạy codex login. Xác nhận trong browser vừa mở, rồi quay lại đây.'
+        ? 'Đang chạy codex login. Xác nhận trong cửa sổ ẩn danh vừa mở, rồi quay lại đây.'
         : 'Đang chạy…'
     )
     try {
@@ -115,11 +158,18 @@ export function useAddAccount({
     }
   }, [])
 
+  const device = phase === 'running' ? parseDevicePrompt(lines) : null
+
   return {
     phase,
     message,
     command,
     lines,
+    device,
+    openedIn,
+    reopen: () => {
+      if (device) openUrl(device.url)
+    },
     busy: phase === 'running' || phase === 'capturing',
     start: (action) => launch(action, true),
     run: (action) => launch(action, false),
@@ -128,6 +178,8 @@ export function useAddAccount({
       setMessage('')
       setLines([])
       setCommand('')
+      setOpenedIn('')
+      opened.current = ''
     }
   }
 }

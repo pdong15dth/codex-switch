@@ -51,6 +51,10 @@ export const api = {
       { method: 'POST', ...json(body) }
     ),
 
+  /** Open a verification URL in a private window on the host machine. */
+  openPrivate: (url: string) =>
+    req<{ browser: string }>('/api/browser/open', { method: 'POST', ...json({ url }) }),
+
   startJob: (action: string) =>
     req<{ jobId: string; command: string }>('/api/jobs', { method: 'POST', ...json({ action }) }),
 

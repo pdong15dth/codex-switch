@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { IconCheck, IconKey, IconLogout, IconRefresh, IconTerminal } from './icons'
+import { useEffect, useRef, useState } from 'react'
+import { IconArrowRight, IconCheck, IconKey, IconLogout, IconRefresh, IconTerminal } from './icons'
 import { Button, Card, CardHead, Pill } from './ui'
 import type { AddAccount } from './useAddAccount'
 
 /**
- * The add-an-account surface. One primary button runs the whole flow — spawn
- * `codex login`, wait while the user confirms in their own browser, then save
- * the credential as a profile — and the CLI output streams underneath.
+ * The add-an-account surface. Device code is the primary path: `codex login`
+ * opens the OS default browser with its default profile, which for a
+ * multi-account tool means it silently re-authorises whoever is already signed
+ * in there. With a device code the user picks where to open it — an incognito
+ * window, another Chrome profile, another browser, a phone.
  */
 export function ConsoleCard({
   add,
@@ -19,11 +21,19 @@ export function ConsoleCard({
   index: number
   className?: string
 }) {
+  const [copied, setCopied] = useState(false)
   const boxRef = useRef<HTMLPreElement>(null)
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight
   }, [add.lines])
+
+  // Clear the "copied" flag on a timer rather than leaving it stuck on.
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1600)
+    return () => clearTimeout(timer)
+  }, [copied])
 
   const status =
     add.phase === 'running' ? (
@@ -51,12 +61,16 @@ export function ConsoleCard({
       />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => add.start('codex-login')} disabled={add.busy}>
+        <Button
+          variant="primary"
+          onClick={() => add.start('codex-login-device')}
+          disabled={add.busy}
+        >
           <IconKey className="size-[14px]" />
           Login &amp; lưu profile
         </Button>
-        <Button variant="pill" onClick={() => add.start('codex-login-device')} disabled={add.busy}>
-          Dùng device code
+        <Button variant="pill" onClick={() => add.start('codex-login')} disabled={add.busy}>
+          Mở browser mặc định
         </Button>
         <span className="grow" />
         <Button variant="pill" onClick={() => add.run('codex-status')} disabled={add.busy}>
@@ -68,6 +82,76 @@ export function ConsoleCard({
           Logout
         </Button>
       </div>
+
+      {/* The device prompt, lifted out of the raw output. */}
+      {add.device && (
+        <div className="mt-4 rounded-2xl border border-accent/25 bg-accent/8 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold tracking-[0.12em] text-accent uppercase">
+              bước 1 — trang xác nhận
+            </span>
+            {add.openedIn ? (
+              <Pill tone="ok">
+                <IconCheck className="size-[11px] shrink-0" />
+                đã mở {add.openedIn} với profile trắng
+              </Pill>
+            ) : (
+              <Pill tone="warn">chưa mở được browser</Pill>
+            )}
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button variant="pill" onClick={add.reopen}>
+              Mở lại cửa sổ mới
+            </Button>
+            <a
+              href={add.device.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1.5 font-mono text-[12px] text-dim underline decoration-line2 underline-offset-4 transition-colors hover:text-fg hover:decoration-accent"
+            >
+              {add.device.url}
+              <IconArrowRight className="size-[12px] text-accent" />
+            </a>
+          </div>
+          <p className="mt-2 text-[12px] leading-relaxed text-dim text-pretty">
+            Cửa sổ này dùng profile trắng, tạo mới mỗi lần — không mang theo cookie hay session
+            ChatGPT nào. Nên mỗi lần thêm account bạn đều được hỏi đăng nhập từ đầu.
+            <span className="mt-1 block text-faint">
+              Không dùng chế độ ẩn danh vì Chrome sẽ nhập vào cửa sổ ẩn danh đang mở và kế thừa
+              luôn session của account trước.
+            </span>
+          </p>
+
+          <div className="mt-4 text-[11px] font-semibold tracking-[0.12em] text-accent uppercase">
+            bước 2 — nhập mã
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+            <code className="rounded-lg border border-line2/70 bg-sunken px-3 py-2 font-mono text-[19px] tracking-[0.14em] text-fg">
+              {add.device.code}
+            </code>
+            <Button
+              variant="pill"
+              onClick={() => {
+                navigator.clipboard?.writeText(add.device!.code).then(
+                  () => setCopied(true),
+                  () => setCopied(false)
+                )
+              }}
+            >
+              {copied ? (
+                <>
+                  <IconCheck className="size-[13px] text-accent" />
+                  đã copy
+                </>
+              ) : (
+                'Copy mã'
+              )}
+            </Button>
+            <span className="text-[11.5px] text-faint">mã hết hạn sau 15 phút</span>
+          </div>
+        </div>
+      )}
 
       {add.message && (
         <p
@@ -88,7 +172,7 @@ export function ConsoleCard({
           <div className="flex items-center gap-2 border-b border-line bg-raised/60 px-3.5 py-2">
             <IconTerminal className="size-[13px] shrink-0 text-faint" />
             <span className="grow truncate font-mono text-[11px] text-faint">{add.command}</span>
-            {add.phase !== 'running' && add.phase !== 'capturing' && (
+            {!add.busy && (
               <button
                 onClick={add.reset}
                 aria-label="Xoá output"

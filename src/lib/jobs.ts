@@ -14,6 +14,15 @@ const store = globalThis as typeof globalThis & { __codexSwitchJobs?: Map<string
 store.__codexSwitchJobs ??= new Map()
 const jobs = store.__codexSwitchJobs
 
+/**
+ * codex colours its output, and those escape sequences render as literal
+ * `[90m` noise in the browser. Built from a char code so the pattern does not
+ * embed a raw control character.
+ */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g')
+
+const stripAnsi = (s: string) => s.replace(ANSI, '')
+
 /** Whitelisted commands only — nothing from the request reaches the argv. */
 export const JOB_ACTIONS: Record<string, { bin: string; args: string[] }> = {
   'codex-login': { bin: 'codex', args: ['login'] },
@@ -40,7 +49,10 @@ export function startJob(action: string): Job {
   const child = spawn(spec.bin, spec.args, { shell: true, windowsHide: true })
 
   const push = (buf: Buffer) => {
-    for (const line of buf.toString().split(/\r?\n/)) if (line.length) job.lines.push(line)
+    for (const raw of buf.toString().split(/\r?\n/)) {
+      const line = stripAnsi(raw).trimEnd()
+      if (line.length) job.lines.push(line)
+    }
     if (job.lines.length > 500) job.lines.splice(0, job.lines.length - 500)
   }
   child.stdout?.on('data', push)
