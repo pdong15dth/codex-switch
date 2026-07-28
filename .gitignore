@@ -1,0 +1,8 @@
+node_modules/
+*.log
+*.tmp-*
+
+# Never commit credential snapshots, in case anyone points the data dir here.
+profiles/
+profiles.json
+backups/

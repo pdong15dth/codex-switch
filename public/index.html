@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex Switch</title>
+    <style>
+      * { box-sizing: border-box; }
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel-2: #1c2128;
+        --line: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #2f81f7;
+        --green: #3fb950;
+        --amber: #d29922;
+        --red: #f85149;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.55 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+      }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+      h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+      .sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+      .sub code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+      }
+      .card.active { border-color: var(--green); }
+      .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+
+      .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .grow { flex: 1; min-width: 0; }
+      .name { font-weight: 600; font-size: 16px; }
+      .ident { color: var(--muted); font-size: 13px; word-break: break-all; }
+      .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+      .badge {
+        font-size: 11px; padding: 2px 8px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+        white-space: nowrap;
+      }
+      .badge.ok { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+      .badge.warn { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, transparent); }
+      .badge.bad { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, transparent); }
+
+      button {
+        font: inherit; font-size: 13px; cursor: pointer;
+        background: var(--panel-2); color: var(--text);
+        border: 1px solid var(--line); border-radius: 7px; padding: 7px 13px;
+      }
+      button:hover:not(:disabled) { border-color: var(--muted); }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+      button.primary:hover:not(:disabled) { filter: brightness(1.1); }
+      button.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+
+      input[type="text"] {
+        font: inherit; font-size: 14px;
+        background: var(--bg); color: var(--text);
+        border: 1px solid var(--line); border-radius: 7px; padding: 8px 11px;
+      }
+      input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+      .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+      .err {
+        background: color-mix(in srgb, var(--red) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+        color: #ffb4ae; border-radius: 8px; padding: 10px 13px; font-size: 13px; margin-bottom: 14px;
+      }
+      pre.console {
+        background: #010409; border: 1px solid var(--line); border-radius: 8px;
+        padding: 12px 14px; font-size: 12.5px; line-height: 1.5;
+        max-height: 300px; overflow: auto; margin: 0;
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+      hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Codex Switch</h1>
+      <div class="sub">
+        Lưu và chuyển nhanh giữa nhiều account Codex. Mỗi profile là một bản snapshot của
+        <code id="authPath">~/.codex/auth.json</code>
+      </div>
+
+      <div id="error"></div>
+
+      <div class="card" id="currentCard">
+        <div class="label">Account đang dùng</div>
+        <div id="current"></div>
+      </div>
+
+      <div class="card">
+        <div class="label">Lưu account đang dùng thành profile</div>
+        <div class="row">
+          <input class="grow" type="text" id="newName" placeholder="Tên profile — ví dụ: acc1, work, main" />
+          <button class="primary" id="saveBtn">Lưu profile</button>
+        </div>
+        <div class="hint">
+          Đăng nhập bằng <b>Login account mới</b> ở dưới trước, rồi bấm Lưu profile. Làm lần lượt cho cả 3 account.
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="label" style="margin-bottom: 12px">Profiles đã lưu</div>
+      <div id="profiles"></div>
+
+      <hr />
+
+      <div class="card">
+        <div class="label">Codex CLI</div>
+        <div class="row">
+          <button id="loginBtn">Login account mới (mở browser)</button>
+          <button id="deviceBtn">Login bằng device code</button>
+          <button id="statusBtn">Kiểm tra status</button>
+        </div>
+        <div class="hint" id="cmdHint" style="display: none"></div>
+        <pre class="console" id="console" style="display: none; margin-top: 12px"></pre>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      let poll = null
+
+      const fmtDate = (iso) => {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        return d.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+      }
+
+      const modeBadge = (mode) => {
+        const cls = mode === 'chatgpt' ? 'ok' : mode === 'apikey' ? '' : 'bad'
+        const text = mode === 'chatgpt' ? 'ChatGPT OAuth' : mode === 'apikey' ? 'API key' : mode
+        return `<span class="badge ${cls}">${esc(text)}</span>`
+      }
+
+      const esc = (s) =>
+        String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+      function showError(msg) {
+        $('error').innerHTML = msg ? `<div class="err">${esc(msg)}</div>` : ''
+      }
+
+      async function api(path, options) {
+        const res = await fetch(path, {
+          ...options,
+          headers: options?.body ? { 'content-type': 'application/json' } : undefined
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Lỗi không rõ')
+        return data
+      }
+
+      function renderCurrent(state) {
+        $('authPath').textContent = state.codexAuthPath
+        const c = state.current
+        if (!c.exists) {
+          $('currentCard').classList.remove('active')
+          $('current').innerHTML =
+            '<div class="empty">Chưa có file auth.json — bấm <b>Login account mới</b> để đăng nhập.</div>'
+          return
+        }
+        $('currentCard').classList.add('active')
+        const expiry = c.expiresAt
+          ? `<div class="meta">Token hết hạn: ${esc(fmtDate(c.expiresAt))}</div>`
+          : ''
+        const saved = c.savedAsProfile
+          ? '<span class="badge ok">đã lưu thành profile</span>'
+          : '<span class="badge warn">chưa lưu thành profile</span>'
+        $('current').innerHTML = `
+          <div class="row">
+            <div class="grow">
+              <div class="name">${esc(c.identity)}</div>
+              ${c.plan ? `<div class="ident">plan: ${esc(c.plan)}</div>` : ''}
+            </div>
+            ${modeBadge(c.authMode)}
+            ${saved}
+          </div>
+          ${expiry}`
+      }
+
+      function renderProfiles(state) {
+        const box = $('profiles')
+        if (!state.profiles.length) {
+          box.innerHTML = '<div class="empty">Chưa có profile nào. Lưu account đang dùng ở trên để bắt đầu.</div>'
+          return
+        }
+        box.innerHTML = state.profiles
+          .map(
+            (p) => `
+          <div class="card ${p.active ? 'active' : ''}">
+            <div class="row">
+              <div class="grow">
+                <div class="name">
+                  ${esc(p.name)}
+                  ${p.active ? '<span class="badge ok">ĐANG DÙNG</span>' : ''}
+                  ${p.missing ? '<span class="badge bad">snapshot bị mất</span>' : ''}
+                </div>
+                <div class="ident">${esc(p.identity)}</div>
+                <div class="meta">
+                  ${p.plan ? `plan: ${esc(p.plan)} · ` : ''}lưu lúc ${esc(fmtDate(p.updatedAt))}
+                  ${p.expiresAt ? ` · token hết hạn ${esc(fmtDate(p.expiresAt))}` : ''}
+                </div>
+              </div>
+              ${p.missing ? '' : modeBadge(p.authMode)}
+            </div>
+            <div class="row" style="margin-top: 12px">
+              <button class="primary" data-act="activate" data-id="${p.id}"
+                ${p.active || p.missing ? 'disabled' : ''}>Switch sang account này</button>
+              <button data-act="recapture" data-id="${p.id}">Cập nhật lại từ account hiện tại</button>
+              <button data-act="rename" data-id="${p.id}" data-name="${esc(p.name)}">Đổi tên</button>
+              <button class="danger" data-act="delete" data-id="${p.id}" data-name="${esc(p.name)}">Xoá</button>
+            </div>
+          </div>`
+          )
+          .join('')
+      }
+
+      function render(state) {
+        renderCurrent(state)
+        renderProfiles(state)
+      }
+
+      async function refresh() {
+        try {
+          render(await api('/api/state'))
+          showError('')
+        } catch (e) {
+          showError(e.message)
+        }
+      }
+
+      $('saveBtn').onclick = async () => {
+        const name = $('newName').value.trim()
+        if (!name) return showError('Nhập tên profile trước đã')
+        try {
+          const r = await api('/api/profiles', { method: 'POST', body: JSON.stringify({ name }) })
+          $('newName').value = ''
+          render(r.state)
+          showError('')
+        } catch (e) {
+          showError(e.message)
+        }
+      }
+
+      $('newName').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') $('saveBtn').click()
+      })
+
+      $('profiles').onclick = async (e) => {
+        const btn = e.target.closest('button[data-act]')
+        if (!btn) return
+        const { act, id, name } = btn.dataset
+        try {
+          if (act === 'activate') {
+            const r = await api(`/api/profiles/${id}/activate`, { method: 'POST' })
+            render(r.state)
+            showError('')
+          } else if (act === 'recapture') {
+            if (!confirm(`Ghi đè snapshot của "${btn.closest('.card').querySelector('.name').textContent.trim()}" bằng account đang dùng?`)) return
+            render((await api(`/api/profiles/${id}/recapture`, { method: 'POST' })).state)
+            showError('')
+          } else if (act === 'rename') {
+            const next = prompt('Tên mới:', name)
+            if (next === null) return
+            render((await api(`/api/profiles/${id}`, { method: 'PATCH', body: JSON.stringify({ name: next }) })).state)
+            showError('')
+          } else if (act === 'delete') {
+            if (!confirm(`Xoá profile "${name}"? Snapshot credential của profile này sẽ bị xoá khỏi đĩa.`)) return
+            render((await api(`/api/profiles/${id}`, { method: 'DELETE' })).state)
+            showError('')
+          }
+        } catch (err) {
+          showError(err.message)
+        }
+      }
+
+      async function runJob(action) {
+        try {
+          const { jobId, command } = await api('/api/jobs', {
+            method: 'POST',
+            body: JSON.stringify({ action })
+          })
+          $('cmdHint').style.display = 'block'
+          $('cmdHint').innerHTML = `Đang chạy: <code>${esc(command)}</code>`
+          $('console').style.display = 'block'
+          $('console').textContent = 'Đang chạy…'
+          showError('')
+
+          clearInterval(poll)
+          poll = setInterval(async () => {
+            try {
+              const j = await api(`/api/jobs/${jobId}`)
+              $('console').textContent = j.lines.join('\n') || 'Đang chạy…'
+              $('console').scrollTop = $('console').scrollHeight
+              if (j.done) {
+                clearInterval(poll)
+                $('cmdHint').innerHTML = `Xong: <code>${esc(command)}</code> (exit ${j.code})`
+                refresh()
+              }
+            } catch {
+              clearInterval(poll)
+            }
+          }, 700)
+        } catch (e) {
+          showError(e.message)
+        }
+      }
+
+      $('loginBtn').onclick = () => runJob('login')
+      $('deviceBtn').onclick = () => runJob('login-device')
+      $('statusBtn').onclick = () => runJob('status')
+
+      refresh()
+      setInterval(() => {
+        if (!poll) refresh()
+      }, 5000)
+    </script>
+  </body>
+</html>
