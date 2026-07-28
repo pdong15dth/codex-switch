@@ -56,6 +56,10 @@ export function UsageChartCard({
 
   const total = series.reduce((n, s) => n + s.points.length, 0)
 
+  const failures = profiles
+    .filter((p) => p.usageError)
+    .map((p) => ({ id: p.id, name: p.name, message: p.usageError!.message }))
+
   return (
     <Card className={`p-5 ${className}`} index={index}>
       <CardHead
@@ -71,6 +75,20 @@ export function UsageChartCard({
           options={RANGES.map((r) => ({ id: r.id, label: r.label }))}
         />
       </div>
+
+      {/* An empty chart should say why, not just sit there blank. */}
+      {series.length === 0 && failures.length > 0 && (
+        <ul className="mt-4 space-y-1.5">
+          {failures.map((f) => (
+            <li
+              key={f.id}
+              className="rounded-xl border border-bad/35 bg-bad/8 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-bad text-pretty"
+            >
+              <b className="font-semibold">{f.name}</b>: {f.message}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="mt-4 grow">
         <LineChart series={series} spanMs={span} />

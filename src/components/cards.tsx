@@ -206,6 +206,12 @@ export function QuotaCard({
         right={w ? <Chip tone="neutral">đã dùng {Math.round(w.usedPercent)}%</Chip> : undefined}
       />
 
+      {live?.usageError && (
+        <p className="mt-4 rounded-xl border border-bad/35 bg-bad/8 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-bad text-pretty">
+          {live.usageError.message}
+        </p>
+      )}
+
       {w ? (
         <div className="mt-4 flex grow flex-col items-center justify-center gap-4">
           <QuotaGauge window={w} />

@@ -49,7 +49,8 @@ export async function loadState(): Promise<AppState> {
       profiles: parsed.profiles ?? [],
       activeProfileIds: parsed.activeProfileIds ?? {},
       usage: parsed.usage ?? {},
-      usageHistory: parsed.usageHistory ?? {}
+      usageHistory: parsed.usageHistory ?? {},
+      usageErrors: parsed.usageErrors ?? {}
     }
   } catch {
     const fresh = seedState()
