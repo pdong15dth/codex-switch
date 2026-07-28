@@ -91,7 +91,7 @@ export function Rail({
 }) {
   return (
     <aside
-      className={`sticky top-0 flex h-dvh shrink-0 flex-col border-r border-line bg-rail transition-[width] duration-300 ease-[var(--ease-spring)] ${
+      className={`flex h-full shrink-0 flex-col border-r border-line bg-rail transition-[width] duration-300 ease-[var(--ease-spring)] ${
         collapsed ? 'w-[68px]' : 'w-[238px]'
       }`}
     >

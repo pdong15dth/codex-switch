@@ -30,7 +30,7 @@ export function TopBar({
   const meta = TITLES[view] ?? TITLES.overview
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
+    <header className="shrink-0 border-b border-line bg-canvas/85 backdrop-blur-md">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-6 py-4">
         <div className="min-w-0">
           <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{meta.title}</h1>

@@ -61,9 +61,11 @@ export function Donut({
  * Area chart with the reference's green→lime gradient. Takes raw counts and
  * renders a smooth-ish polyline; flat input still produces a readable baseline.
  */
-export function Area({ points, height = 82 }: { points: number[]; height?: number }) {
+export function Area({ points, height = 74 }: { points: number[]; height?: number }) {
   const w = 300
   const max = Math.max(1, ...points)
+  // Without a fixed pixel height the SVG keeps its 300:74 ratio and grows tall
+  // on wide cards, leaving a void under the data.
   const step = points.length > 1 ? w / (points.length - 1) : w
 
   const coords = points.map((p, i) => {
@@ -76,7 +78,12 @@ export function Area({ points, height = 82 }: { points: number[]; height?: numbe
   const fill = `${line} L ${w},${height} L 0,${height} Z`
 
   return (
-    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${w} ${height}`}
+      style={{ height }}
+      className="w-full"
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.32" />

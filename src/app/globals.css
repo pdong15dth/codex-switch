@@ -44,21 +44,21 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Single light source, top-left, tinted with the accent. */
+/*
+ * Single light source, top-left, tinted with the accent. Sits at z-index -1 so
+ * content paints above it without needing a rule on body's children — an
+ * earlier `body > * { position: relative }` did that and broke `sr-only`,
+ * which needs `position: absolute` to stay out of the layout.
+ */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   background:
     radial-gradient(80% 55% at 12% -8%, rgb(46 224 160 / 0.09), transparent 60%),
     radial-gradient(70% 50% at 95% 8%, rgb(79 176 232 / 0.05), transparent 55%);
-}
-
-body > * {
-  position: relative;
-  z-index: 1;
 }
 
 .tnum {

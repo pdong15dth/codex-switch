@@ -305,13 +305,20 @@ export function TokenCard({
         </div>
       </div>
 
-      <div className="mt-4 border-t border-line pt-3">
-        <Area points={series} />
-        <div className="mt-1.5 flex justify-between text-[10.5px] text-faint">
-          <span>14 ngày trước</span>
-          <span>hôm nay</span>
+      {/* An all-zero chart is a void, not information — say so instead. */}
+      {backups.length === 0 ? (
+        <p className="mt-4 border-t border-line pt-3 text-[12px] text-faint">
+          Chưa có lần switch nào để vẽ biểu đồ.
+        </p>
+      ) : (
+        <div className="mt-4 border-t border-line pt-3">
+          <Area points={series} />
+          <div className="mt-1.5 flex justify-between text-[10.5px] text-faint">
+            <span>14 ngày trước</span>
+            <span>hôm nay</span>
+          </div>
         </div>
-      </div>
+      )}
     </Card>
   )
 }

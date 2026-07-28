@@ -2,16 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
-import {
-  AccountsCard,
-  BackupsCard,
-  FilesCard,
-  LiveCard,
-  StatsCard,
-  TokenCard
-} from './cards'
+import { AccountsCard, BackupsCard, FilesCard, LiveCard, StatsCard, TokenCard } from './cards'
 import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
+import { EmptyState } from './EmptyState'
 import { ItemsModal } from './ItemsModal'
 import { Rail, type View } from './Rail'
 import { SwitchResultDialog } from './SwitchResultDialog'
@@ -20,7 +14,7 @@ import { Button, ConfirmDialog, ErrorBar, Input, Modal } from './ui'
 // Presets are static data with no Node imports, so the client uses them
 // directly instead of round-tripping through /api/presets.
 import { BUILTIN_PRESETS } from '@/lib/presets'
-import type { ConfigItem, StateView, SwitchResult } from '@/types'
+import type { ConfigItem, ProfileView, StateView, SwitchResult } from '@/types'
 
 interface Confirmation {
   title: string
@@ -105,8 +99,38 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
       return next
     })
 
+  const deleteNewest = () => {
+    const newest = [...profiles].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+    if (newest) askDelete(newest.id, newest.name)
+  }
+
+  const liveProps = (p: ProfileView | null) => ({
+    live: p,
+    now,
+    busy,
+    onRecapture: () => p && run(async () => (await api.importCurrent(p.id)).state),
+    onConfigure: () => p && setConfiguring(p.id),
+    onSave: () => setShowCreate(true)
+  })
+
+  const statsProps = {
+    profiles,
+    backups,
+    onAdd: () => setShowCreate(true),
+    onRemoveLast: deleteNewest
+  }
+
+  const accountsProps = {
+    profiles,
+    busy,
+    onSwitch: doSwitch,
+    onConfigure: setConfiguring
+  }
+
   return (
-    <div className="flex min-h-dvh">
+    // App shell: the page itself never scrolls, only the content region does, so
+    // the rail stays fully visible.
+    <div className="flex h-dvh overflow-hidden">
       <Rail
         view={view}
         onView={setView}
@@ -120,7 +144,7 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
         onToggle={() => setCollapsed(!collapsed)}
       />
 
-      <div className="flex min-w-0 grow flex-col">
+      <div className="flex min-w-0 grow flex-col overflow-hidden">
         <TopBar
           view={view}
           now={now}
@@ -129,102 +153,55 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
           onSave={() => setShowCreate(true)}
         />
 
-        <main id="main" className="grow px-6 py-6">
-          {error && (
-            <div className="mb-5">
-              <ErrorBar message={error} onDismiss={() => setError('')} />
-            </div>
-          )}
-
-          {view === 'overview' && (
-            <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              <LiveCard
-                live={live}
-                now={now}
-                busy={busy}
-                onRecapture={() =>
-                  live && run(async () => (await api.importCurrent(live.id)).state)
-                }
-                onConfigure={() => live && setConfiguring(live.id)}
-                onSave={() => setShowCreate(true)}
-              />
-              <StatsCard
-                profiles={profiles}
-                backups={backups}
-                index={1}
-                onAdd={() => setShowCreate(true)}
-                onRemoveLast={() => {
-                  const last = [...profiles].sort((a, b) =>
-                    b.createdAt.localeCompare(a.createdAt)
-                  )[0]
-                  if (last) askDelete(last.id, last.name)
-                }}
-              />
-              <TokenCard live={live} backups={backups} now={now} index={2} />
-              <FilesCard profiles={profiles} index={3} />
-              <AccountsCard
-                profiles={profiles}
-                busy={busy}
-                onSwitch={doSwitch}
-                onConfigure={setConfiguring}
-                index={4}
-                className="lg:col-span-2"
-              />
-              <ConsoleCard onFinished={refresh} index={5} className="xl:col-span-2" />
-              <BackupsCard backups={backups} index={6} />
-            </div>
-          )}
-
-          {view === 'accounts' && (
-            <div className="grid items-start gap-4 xl:grid-cols-3">
-              <AccountsCard
-                profiles={profiles}
-                busy={busy}
-                onSwitch={doSwitch}
-                onConfigure={setConfiguring}
-                index={0}
-                className="xl:col-span-2"
-              />
-              <div className="grid gap-4">
-                <StatsCard
-                  profiles={profiles}
-                  backups={backups}
-                  index={1}
-                  onAdd={() => setShowCreate(true)}
-                  onRemoveLast={() => {
-                    const last = [...profiles].sort((a, b) =>
-                      b.createdAt.localeCompare(a.createdAt)
-                    )[0]
-                    if (last) askDelete(last.id, last.name)
-                  }}
-                />
-                <FilesCard profiles={profiles} index={2} />
+        <main id="main" className="grow overflow-y-auto px-6 py-6">
+          <div className="mx-auto max-w-[1440px]">
+            {error && (
+              <div className="mb-5">
+                <ErrorBar message={error} onDismiss={() => setError('')} />
               </div>
-            </div>
-          )}
+            )}
 
-          {view === 'backups' && (
-            <div className="grid items-start gap-4 xl:grid-cols-3">
-              <BackupsCard backups={backups} index={0} className="xl:col-span-2" />
-              <TokenCard live={live} backups={backups} now={now} index={1} />
-            </div>
-          )}
-
-          {view === 'console' && (
-            <div className="grid items-start gap-4 xl:grid-cols-3">
-              <ConsoleCard onFinished={refresh} index={0} className="xl:col-span-2" />
-              <LiveCard
-                live={live}
-                now={now}
-                busy={busy}
-                onRecapture={() =>
-                  live && run(async () => (await api.importCurrent(live.id)).state)
-                }
-                onConfigure={() => live && setConfiguring(live.id)}
-                onSave={() => setShowCreate(true)}
-              />
-            </div>
-          )}
+            {profiles.length === 0 ? (
+              /* Nothing saved yet: onboarding rather than six zero-value widgets. */
+              <div className="grid items-start gap-4 xl:grid-cols-3">
+                <div className="xl:col-span-2">
+                  <EmptyState
+                    toolName={category?.name ?? ''}
+                    onSave={() => setShowCreate(true)}
+                  />
+                </div>
+                <ConsoleCard onFinished={refresh} index={1} />
+              </div>
+            ) : view === 'overview' ? (
+              <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                <LiveCard {...liveProps(live)} />
+                <StatsCard {...statsProps} index={1} />
+                <TokenCard live={live} backups={backups} now={now} index={2} />
+                <AccountsCard {...accountsProps} index={3} className="lg:col-span-2" />
+                <FilesCard profiles={profiles} index={4} />
+                <ConsoleCard onFinished={refresh} index={5} className="xl:col-span-2" />
+                <BackupsCard backups={backups} index={6} />
+              </div>
+            ) : view === 'accounts' ? (
+              <div className="grid items-start gap-4 xl:grid-cols-3">
+                <AccountsCard {...accountsProps} index={0} className="xl:col-span-2" />
+                <div className="grid items-start gap-4">
+                  <StatsCard {...statsProps} index={1} />
+                  <FilesCard profiles={profiles} index={2} />
+                </div>
+              </div>
+            ) : view === 'backups' ? (
+              <div className="grid items-start gap-4 xl:grid-cols-3">
+                <BackupsCard backups={backups} index={0} className="xl:col-span-2" />
+                <TokenCard live={live} backups={backups} now={now} index={1} />
+              </div>
+            ) : (
+              <div className="grid items-start gap-4 xl:grid-cols-3">
+                <ConsoleCard onFinished={refresh} index={0} className="xl:col-span-2" />
+                <LiveCard {...liveProps(live)} />
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
