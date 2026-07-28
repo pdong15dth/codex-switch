@@ -39,7 +39,11 @@ export const api = {
   switchProfile: (id: string) =>
     req<{
       result: SwitchResult
-      refresh: { refreshed: number; failures: { label: string; message: string }[] }
+      refresh: {
+        refreshed: number
+        failures: { label: string; message: string }[]
+        warning: string | null
+      }
       state: StateView
     }>(`/api/profiles/${id}/switch`, { method: 'POST' }),
 

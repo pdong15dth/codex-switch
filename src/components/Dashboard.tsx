@@ -117,8 +117,11 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
 
   const doSwitch = (id: string) =>
     run(async () => {
-      const { result, state: next } = await api.switchProfile(id)
+      const { result, refresh, state: next } = await api.switchProfile(id)
       setSwitchResult(result)
+      // A switch can succeed on a credential that can no longer be refreshed;
+      // say so rather than letting it fail silently an hour later.
+      if (refresh.warning) setError(refresh.warning)
       return next
     })
 
