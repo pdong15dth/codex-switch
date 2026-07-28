@@ -177,7 +177,8 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
             )}
 
             {profiles.length === 0 ? (
-              /* Nothing saved yet: onboarding rather than six zero-value widgets. */
+              /* Nothing saved yet: onboarding plus the two things needed right
+                 now — the login flow, and the 2FA code that login will ask for. */
               <div className="grid gap-4 xl:grid-cols-3">
                 <EmptyState
                   toolName={category?.name ?? ''}
@@ -185,7 +186,10 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                   busy={add.busy}
                   className="xl:col-span-2"
                 />
-                <ConsoleCard add={add} index={1} />
+                <div className="grid gap-4">
+                  <ConsoleCard add={add} index={1} />
+                  <TotpCard index={2} />
+                </div>
               </div>
             ) : view === 'overview' ? (
               /* Mixed card grid: live account, quota gauge, quick switch, 2FA,
@@ -249,7 +253,12 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
             ) : view === 'backups' ? (
               <BackupsCard backups={backups} index={0} />
             ) : (
-              <ConsoleCard add={add} index={0} />
+              /* The add-account view is where a 2FA code gets typed, so the
+                 generator belongs beside the login flow. */
+              <div className="grid gap-4 xl:grid-cols-3">
+                <ConsoleCard add={add} index={0} className="xl:col-span-2" />
+                <TotpCard index={1} />
+              </div>
             )}
           </div>
         </main>
