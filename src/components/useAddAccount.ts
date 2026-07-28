@@ -6,22 +6,45 @@ import type { StateView } from '@/types'
 
 export type Phase = 'idle' | 'running' | 'capturing' | 'done' | 'error'
 
-/** Device-code prompt parsed out of the CLI output. */
-export interface DevicePrompt {
+/** The sign-in prompt parsed out of the CLI output. */
+export interface AuthPrompt {
   url: string
-  code: string
+  /** Only the `--device-auth` flow has a one-time code. */
+  code?: string
 }
 
 /**
- * `codex login --device-auth` prints a verification URL and a one-time code.
- * Pull them out so the UI can show them properly instead of making the user
- * read raw terminal output.
+ * Long URLs can arrive split across lines. Glue a bare, space-free line back
+ * onto the previous one when that line was still inside a URL.
  */
-function parseDevicePrompt(lines: string[]): DevicePrompt | null {
-  const text = lines.join('\n')
-  const url = text.match(/https:\/\/\S*device\S*/)?.[0]
+function dewrap(lines: string[]): string {
+  const out: string[] = []
+  for (const line of lines) {
+    const prev = out[out.length - 1]
+    if (prev && /https?:\/\/\S*$/.test(prev) && /^\S+$/.test(line) && !/^https?:/.test(line)) {
+      out[out.length - 1] = prev + line
+    } else {
+      out.push(line)
+    }
+  }
+  return out.join('\n')
+}
+
+/**
+ * Both login flows print a URL to open:
+ *
+ *   codex login              -> https://auth.openai.com/oauth/authorize?...
+ *   codex login --device-auth -> https://auth.openai.com/codex/device + a code
+ *
+ * Pull them out so the UI can present them, and so the URL can be opened in a
+ * clean browser profile rather than whatever codex decided to launch.
+ */
+function parseAuthPrompt(lines: string[]): AuthPrompt | null {
+  const text = dewrap(lines)
+  const url = text.match(/https:\/\/auth\.openai\.com\/\S+/)?.[0]?.replace(/[.,)\]]+$/, '')
+  if (!url) return null
   const code = text.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4,6}\b/)?.[0]
-  return url && code ? { url, code } : null
+  return { url, code }
 }
 
 export interface AddAccount {
@@ -30,8 +53,8 @@ export interface AddAccount {
   message: string
   command: string
   lines: string[]
-  /** Set once the CLI has printed a device-code prompt. */
-  device: DevicePrompt | null
+  /** Set once the CLI has printed a URL to sign in at. */
+  prompt: AuthPrompt | null
   /** Name of the browser opened privately, if the tool managed to open one. */
   openedIn: string
   /** Re-open the verification URL in a fresh private window. */
@@ -109,10 +132,10 @@ export function useAddAccount({
         const job = await api.job(jobId)
         setLines(job.lines)
 
-        // As soon as the CLI prints the device prompt, open it in a private
-        // window so the login starts from a clean session.
-        const prompt = parseDevicePrompt(job.lines)
-        if (prompt && opened.current !== prompt.url) openUrl(prompt.url)
+        // As soon as the CLI prints the sign-in URL, open it in a clean profile
+        // so the login does not inherit another account's session.
+        const found = parseAuthPrompt(job.lines)
+        if (found && opened.current !== found.url) openUrl(found.url)
 
         if (!job.done) return
         clearInterval(timer)
@@ -158,17 +181,17 @@ export function useAddAccount({
     }
   }, [])
 
-  const device = phase === 'running' ? parseDevicePrompt(lines) : null
+  const prompt = phase === 'running' ? parseAuthPrompt(lines) : null
 
   return {
     phase,
     message,
     command,
     lines,
-    device,
+    prompt,
     openedIn,
     reopen: () => {
-      if (device) openUrl(device.url)
+      if (prompt) openUrl(prompt.url)
     },
     busy: phase === 'running' || phase === 'capturing',
     start: (action) => launch(action, true),

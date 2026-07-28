@@ -61,16 +61,17 @@ export function ConsoleCard({
       />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          variant="primary"
-          onClick={() => add.start('codex-login-device')}
-          disabled={add.busy}
-        >
+        <Button variant="primary" onClick={() => add.start('codex-login')} disabled={add.busy}>
           <IconKey className="size-[14px]" />
           Login &amp; lưu profile
         </Button>
-        <Button variant="pill" onClick={() => add.start('codex-login')} disabled={add.busy}>
-          Mở browser mặc định
+        <Button
+          variant="pill"
+          onClick={() => add.start('codex-login-device')}
+          disabled={add.busy}
+          title="Cần bật xác thực mã thiết bị trong Cài đặt bảo mật ChatGPT của account đó"
+        >
+          Dùng device code
         </Button>
         <span className="grow" />
         <Button variant="pill" onClick={() => add.run('codex-status')} disabled={add.busy}>
@@ -83,12 +84,12 @@ export function ConsoleCard({
         </Button>
       </div>
 
-      {/* The device prompt, lifted out of the raw output. */}
-      {add.device && (
+      {/* The sign-in prompt, lifted out of the raw output. */}
+      {add.prompt && (
         <div className="mt-4 rounded-2xl border border-accent/25 bg-accent/8 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold tracking-[0.12em] text-accent uppercase">
-              bước 1 — trang xác nhận
+              {add.prompt.code ? 'bước 1 — trang xác nhận' : 'đăng nhập ở cửa sổ này'}
             </span>
             {add.openedIn ? (
               <Pill tone="ok">
@@ -105,12 +106,12 @@ export function ConsoleCard({
               Mở lại cửa sổ mới
             </Button>
             <a
-              href={add.device.url}
+              href={add.prompt.url}
               target="_blank"
               rel="noreferrer noopener"
               className="inline-flex items-center gap-1.5 font-mono text-[12px] text-dim underline decoration-line2 underline-offset-4 transition-colors hover:text-fg hover:decoration-accent"
             >
-              {add.device.url}
+              {add.prompt.url.length > 64 ? `${add.prompt.url.slice(0, 64)}…` : add.prompt.url}
               <IconArrowRight className="size-[12px] text-accent" />
             </a>
           </div>
@@ -123,33 +124,47 @@ export function ConsoleCard({
             </span>
           </p>
 
-          <div className="mt-4 text-[11px] font-semibold tracking-[0.12em] text-accent uppercase">
-            bước 2 — nhập mã
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-            <code className="rounded-lg border border-line2/70 bg-sunken px-3 py-2 font-mono text-[19px] tracking-[0.14em] text-fg">
-              {add.device.code}
-            </code>
-            <Button
-              variant="pill"
-              onClick={() => {
-                navigator.clipboard?.writeText(add.device!.code).then(
-                  () => setCopied(true),
-                  () => setCopied(false)
-                )
-              }}
-            >
-              {copied ? (
-                <>
-                  <IconCheck className="size-[13px] text-accent" />
-                  đã copy
-                </>
-              ) : (
-                'Copy mã'
-              )}
-            </Button>
-            <span className="text-[11.5px] text-faint">mã hết hạn sau 15 phút</span>
-          </div>
+          {/* Only the device flow has a code to type. */}
+          {add.prompt.code && (
+            <>
+              <div className="mt-4 text-[11px] font-semibold tracking-[0.12em] text-accent uppercase">
+                bước 2 — nhập mã
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                <code className="rounded-lg border border-line2/70 bg-sunken px-3 py-2 font-mono text-[19px] tracking-[0.14em] text-fg">
+                  {add.prompt.code}
+                </code>
+                <Button
+                  variant="pill"
+                  onClick={() => {
+                    const code = add.prompt?.code
+                    if (!code) return
+                    navigator.clipboard?.writeText(code).then(
+                      () => setCopied(true),
+                      () => setCopied(false)
+                    )
+                  }}
+                >
+                  {copied ? (
+                    <>
+                      <IconCheck className="size-[13px] text-accent" />
+                      đã copy
+                    </>
+                  ) : (
+                    'Copy mã'
+                  )}
+                </Button>
+                <span className="text-[11.5px] text-faint">mã hết hạn sau 15 phút</span>
+              </div>
+            </>
+          )}
+
+          {!add.prompt.code && (
+            <p className="mt-2.5 rounded-lg border border-warn/30 bg-warn/8 px-3 py-2 text-[12px] leading-relaxed text-warn text-pretty">
+              Codex cũng tự mở browser mặc định của bạn — bỏ qua cửa sổ đó và đăng nhập ở cửa sổ
+              profile trắng, nếu không nó sẽ dùng lại account đang đăng nhập sẵn.
+            </p>
+          )}
         </div>
       )}
 
