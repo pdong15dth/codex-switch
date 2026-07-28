@@ -51,6 +51,21 @@ export const api = {
       { method: 'POST', ...json(body) }
     ),
 
+  /** Current 2FA code for a profile. The secret stays on the server. */
+  totpCode: (id: string) =>
+    req<{ code: string; expiresAt: number; period: number }>(`/api/profiles/${id}/totp`),
+
+  /** Store or clear a profile's 2FA secret. Pass null to remove it. */
+  setTotp: (id: string, secret: string | null) =>
+    req<{ state: StateView }>(`/api/profiles/${id}/totp`, {
+      method: 'PUT',
+      ...json({ secret })
+    }),
+
+  /** Read quota for every saved account and cache the results. */
+  refreshUsage: () =>
+    req<{ fresh: number; total: number; state: StateView }>('/api/usage', { method: 'POST' }),
+
   /** Open a verification URL in a private window on the host machine. */
   openPrivate: (url: string) =>
     req<{ browser: string }>('/api/browser/open', { method: 'POST', ...json({ url }) }),

@@ -43,12 +43,24 @@ export interface Category {
   updatedAt: string
 }
 
+/** TOTP settings for an account's two-factor code. */
+export interface TotpConfig {
+  /** Base32 shared secret. Stays on the server; never sent to the browser. */
+  secret: string
+  digits: number
+  period: number
+  algorithm: string
+  label?: string | null
+}
+
 export interface Profile {
   id: string
   name: string
   categoryId: string
   presetId?: string
   items: ConfigItem[]
+  /** Optional 2FA secret, so the code can be generated when signing in. */
+  totp?: TotpConfig | null
   createdAt: string
   updatedAt: string
 }
@@ -104,6 +116,8 @@ export interface AppState {
   profiles: Profile[]
   /** categoryId → profileId of the profile last switched in for that category. */
   activeProfileIds: Record<string, string>
+  /** accountKey → last quota read, kept so inactive accounts still show a figure. */
+  usage?: Record<string, UsageSnapshot>
 }
 
 // ── View models sent to the browser ───────────────────────────────
@@ -129,11 +143,15 @@ export interface Identity {
   lastRefresh?: string | null
 }
 
-export interface ProfileView extends Omit<Profile, 'items'> {
+export interface ProfileView extends Omit<Profile, 'items' | 'totp'> {
   items: ConfigItemView[]
-  /** True when every enabled file-replace item matches what is on disk. */
+  /** Whether a 2FA secret is stored — never the secret itself. */
+  hasTotp: boolean
+  /** True when the credential on disk belongs to this profile's account. */
   active: boolean
   identity: Identity | null
+  /** Last quota read for this account; stale for inactive ones. */
+  usage: UsageSnapshot | null
 }
 
 export type ConfigItemView = ConfigItem & {
@@ -143,6 +161,27 @@ export type ConfigItemView = ConfigItem & {
   hasContent?: boolean
   /** file-replace only: whether targetPath exists on disk. */
   targetExists?: boolean
+}
+
+// ── Quota / usage ─────────────────────────────────────────────────
+
+export interface UsageWindow {
+  usedPercent: number
+  /** Length of the rate-limit window, e.g. 18000 (5h) or 604800 (7d). */
+  windowSeconds: number
+  resetAt: string | null
+}
+
+/** Quota read from the backend for one account, plus when it was read. */
+export interface UsageSnapshot {
+  accountKey: string
+  email: string | null
+  planType: string | null
+  limitReached: boolean
+  primary: UsageWindow | null
+  secondary: UsageWindow | null
+  creditBalance: string | null
+  fetchedAt: string
 }
 
 /** One recorded switch — the backup folder is also the history log. */

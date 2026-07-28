@@ -136,11 +136,16 @@ export async function buildStateView(): Promise<StateView> {
 
   for (const profile of state.profiles) {
     const items = await buildItemViews(profile)
+    const identity = deriveIdentity(items)
+    // Strip the TOTP secret: the view only reports that one exists.
+    const { totp, ...rest } = profile
     profiles.push({
-      ...profile,
+      ...rest,
       items,
+      hasTotp: Boolean(totp?.secret),
       active: await isActive(items),
-      identity: deriveIdentity(items)
+      identity,
+      usage: identity?.accountKey ? (state.usage?.[identity.accountKey] ?? null) : null
     })
   }
 

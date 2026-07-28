@@ -4,7 +4,8 @@ import { IconClock, IconPlus, IconRefresh } from './icons'
 import { Button } from './ui'
 
 const TITLES: Record<string, { title: string; sub: string }> = {
-  overview: { title: 'Tổng quan', sub: 'account nào đang dùng, token còn bao lâu' },
+  overview: { title: 'Tổng quan', sub: 'quota còn lại và thời điểm reset của từng account' },
+  accounts: { title: 'Danh sách', sub: 'tất cả profile trong một bảng' },
   backups: { title: 'Backups', sub: 'mỗi lần switch tạo một bản backup' },
   console: { title: 'Thêm account', sub: 'login bằng Codex CLI rồi lưu thành profile' }
 }

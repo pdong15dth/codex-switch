@@ -159,7 +159,8 @@ export function ItemsModal({
   onItemsChange,
   onRename,
   onImport,
-  onDelete
+  onDelete,
+  onSetTotp
 }: {
   profile: ProfileView
   busy: boolean
@@ -168,9 +169,11 @@ export function ItemsModal({
   onRename: (name: string) => void
   onImport: () => void
   onDelete: () => void
+  onSetTotp: (secret: string | null) => void
 }) {
   const [addType, setAddType] = useState<ConfigItem['type']>('file-replace')
   const [name, setName] = useState(profile.name)
+  const [secret, setSecret] = useState('')
 
   const commit = (views: ConfigItemView[]) => onItemsChange(views.map(toConfigItem))
 
@@ -245,6 +248,58 @@ export function ItemsModal({
               Import từ đĩa
             </Button>
           </div>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <span className="text-[12.5px] text-dim">2FA secret</span>
+            {profile.hasTotp && <Pill tone="ok">đã lưu</Pill>}
+          </div>
+
+          {profile.hasTotp ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="grow text-[12px] leading-relaxed text-faint text-pretty">
+                Mã 2FA hiện trên card của account này. Secret nằm trong{' '}
+                <code className="font-mono">state.json</code> trên máy bạn và không bao giờ được gửi
+                về browser.
+              </p>
+              <Button variant="danger" onClick={() => onSetTotp(null)} disabled={busy}>
+                Xoá secret
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  className="grow font-mono text-[12.5px]"
+                  value={secret}
+                  placeholder="Base32 hoặc otpauth://totp/…"
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(e) => setSecret(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && secret.trim()) {
+                      onSetTotp(secret.trim())
+                      setSecret('')
+                    }
+                  }}
+                />
+                <Button
+                  disabled={busy || !secret.trim()}
+                  onClick={() => {
+                    onSetTotp(secret.trim())
+                    setSecret('')
+                  }}
+                >
+                  Lưu
+                </Button>
+              </div>
+              <p className="mt-2 text-[12px] leading-relaxed text-faint text-pretty">
+                Lưu ý: giữ secret 2FA cùng máy với credential thì lớp xác thực thứ hai gần như mất
+                tác dụng bảo vệ — cả hai yếu tố nằm một chỗ. Cân nhắc trước khi lưu.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-4 border-t border-line pt-4">

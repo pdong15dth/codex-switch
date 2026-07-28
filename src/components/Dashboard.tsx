@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
+import { AccountCard } from './AccountCard'
 import { AccountsCard, BackupsCard, SummaryBar } from './cards'
 import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
@@ -76,6 +77,25 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
     return () => clearInterval(timer)
   }, [])
 
+  /** Quota comes from the network, so it refreshes far less often than state. */
+  const refreshUsage = useCallback(async () => {
+    try {
+      setState((await api.refreshUsage()).state)
+    } catch {
+      // Quota is best-effort: a failure leaves the cached figures in place.
+    }
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(refreshUsage, 300_000)
+    // Kick off once on mount via the same callback the interval uses.
+    const first = setTimeout(refreshUsage, 0)
+    return () => {
+      clearInterval(timer)
+      clearTimeout(first)
+    }
+  }, [refreshUsage])
+
   const category = state.categories.find((c) => c.id === scope) ?? state.categories[0]
   const profiles = state.profiles.filter((p) => p.categoryId === category?.id)
   const live = profiles.find((p) => p.active) ?? null
@@ -139,7 +159,10 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
           now={now}
           busy={busy}
           adding={add.busy}
-          onRefresh={refresh}
+          onRefresh={() => {
+            refresh()
+            refreshUsage()
+          }}
           onAdd={() => add.start('codex-login')}
         />
 
@@ -163,8 +186,7 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 <ConsoleCard add={add} index={1} />
               </div>
             ) : view === 'overview' ? (
-              /* The table is the page. One summary line above it, the add flow
-                 below it, nothing else competing for attention. */
+              /* One card per account: quota, reset countdown, one-click switch. */
               <>
                 <SummaryBar
                   profiles={profiles}
@@ -172,10 +194,33 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                   adding={add.busy}
                   onAdd={() => add.start('codex-login')}
                 />
-                <div className="grid gap-4">
-                  <AccountsCard {...accountsProps} index={0} />
-                  <ConsoleCard add={add} index={1} />
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {profiles.map((p, i) => (
+                    <AccountCard
+                      key={p.id}
+                      profile={p}
+                      now={now}
+                      busy={busy}
+                      index={i}
+                      onSwitch={() => doSwitch(p.id)}
+                      onRecapture={() =>
+                        run(async () => (await api.importCurrent(p.id)).state)
+                      }
+                      onConfigure={() => setConfiguring(p.id)}
+                    />
+                  ))}
+                  <ConsoleCard add={add} index={profiles.length} />
                 </div>
+              </>
+            ) : view === 'accounts' ? (
+              <>
+                <SummaryBar
+                  profiles={profiles}
+                  now={now}
+                  adding={add.busy}
+                  onAdd={() => add.start('codex-login')}
+                />
+                <AccountsCard {...accountsProps} index={0} />
               </>
             ) : view === 'backups' ? (
               <BackupsCard backups={backups} index={0} />
@@ -215,6 +260,9 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
           }
           onImport={() => run(async () => (await api.importCurrent(configured.id)).state)}
           onDelete={() => askDelete(configured.id, configured.name)}
+          onSetTotp={(secret) =>
+            run(async () => (await api.setTotp(configured.id, secret)).state)
+          }
         />
       )}
 

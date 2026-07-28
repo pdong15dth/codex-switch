@@ -34,7 +34,8 @@ function seedState(): AppState {
       updatedAt: ts
     })),
     profiles: [],
-    activeProfileIds: {}
+    activeProfileIds: {},
+    usage: {}
   }
 }
 
@@ -46,7 +47,8 @@ export async function loadState(): Promise<AppState> {
       schemaVersion: parsed.schemaVersion ?? SCHEMA_VERSION,
       categories: parsed.categories ?? [],
       profiles: parsed.profiles ?? [],
-      activeProfileIds: parsed.activeProfileIds ?? {}
+      activeProfileIds: parsed.activeProfileIds ?? {},
+      usage: parsed.usage ?? {}
     }
   } catch {
     const fresh = seedState()
