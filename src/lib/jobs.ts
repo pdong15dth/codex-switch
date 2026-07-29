@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { prepareLoginSlot, settleLoginSlot } from './login-slot'
 
 export interface Job {
   id: string
@@ -23,18 +24,27 @@ const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g')
 
 const stripAnsi = (s: string) => s.replace(ANSI, '')
 
-/** Whitelisted commands only — nothing from the request reaches the argv. */
-export const JOB_ACTIONS: Record<string, { bin: string; args: string[] }> = {
-  'codex-login': { bin: 'codex', args: ['login'] },
-  'codex-login-device': { bin: 'codex', args: ['login', '--device-auth'] },
+/**
+ * Whitelisted commands only — nothing from the request reaches the argv.
+ *
+ * No `codex logout` on purpose: logout revokes the credential server-side,
+ * killing the same token pair stored in profiles. Login actions move the
+ * live auth.json aside instead (see login-slot.ts).
+ */
+export const JOB_ACTIONS: Record<string, { bin: string; args: string[]; loginSlot?: boolean }> = {
+  'codex-login': { bin: 'codex', args: ['login'], loginSlot: true },
+  'codex-login-device': { bin: 'codex', args: ['login', '--device-auth'], loginSlot: true },
   'codex-status': { bin: 'codex', args: ['login', 'status'] },
-  'codex-logout': { bin: 'codex', args: ['logout'] },
   'claude-login': { bin: 'claude', args: ['/login'] }
 }
 
-export function startJob(action: string): Job {
+export async function startJob(action: string): Promise<Job> {
   const spec = JOB_ACTIONS[action]
   if (!spec) throw new Error(`Action không hợp lệ: ${action}`)
+
+  // Clear the slot before the CLI starts so the new login never has to
+  // revoke (or even see) the account currently on disk.
+  if (spec.loginSlot) await prepareLoginSlot()
 
   const job: Job = {
     id: randomUUID(),
@@ -66,6 +76,15 @@ export function startJob(action: string): Job {
   child.on('close', (code) => {
     job.done = true
     job.code = code
+    // Restore the aside credential when the login produced nothing. Fire and
+    // forget: the client only captures after a successful login anyway.
+    if (spec.loginSlot) {
+      settleLoginSlot().catch((err) => {
+        job.lines.push(
+          `[lỗi] không khôi phục được auth.json: ${err instanceof Error ? err.message : String(err)}`
+        )
+      })
+    }
   })
 
   // Never let a job hang forever; OAuth flows are interactive but bounded.

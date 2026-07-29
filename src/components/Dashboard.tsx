@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/client'
-import { AccountsCard, BackupsCard, LiveCard, QuotaCard, SummaryBar, SwitchCard } from './cards'
+import { AccountsCard, BackupsCard, BestPickCard, FleetCard, LiveCard, SummaryBar } from './cards'
 import { HistoryCard } from './HistoryCard'
 import { TotpCard } from './TotpCard'
 import { UsageChartCard } from './UsageChartCard'
@@ -141,6 +141,13 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
     onState: setState
   })
 
+  // Re-login for a revoked credential: the console view shows the login flow,
+  // and the fresh token is imported back into the same profile.
+  const doRepair = (id: string) => {
+    setView('console')
+    void add.repair(id)
+  }
+
   return (
     // App shell: the page itself never scrolls, only the content region does, so
     // the rail stays fully visible.
@@ -195,34 +202,49 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                 </div>
               </div>
             ) : view === 'overview' ? (
-              /* Mixed card grid: live account, quota gauge, quick switch, 2FA,
-                 add-account and backups. */
+              /* Decision-first layout: live account + quota, the recommended
+                 switch target, then every account's quota ranked. Chart and
+                 history sit below as secondary context. */
               <>
-                <SummaryBar
-                  profiles={profiles}
-                  now={now}
-                  adding={add.busy}
-                  onAdd={() => add.start('codex-login')}
-                />
-                <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                <SummaryBar profiles={profiles} now={now} />
+                <div className="grid gap-4 xl:grid-cols-3">
                   <LiveCard
                     live={live}
                     now={now}
                     busy={busy}
                     index={0}
+                    className="xl:col-span-2"
                     onRecapture={() =>
                       live && run(async () => (await api.importCurrent(live.id)).state)
                     }
                     onConfigure={() => live && setConfiguring(live.id)}
                     onAdd={() => add.start('codex-login')}
                   />
-                  <QuotaCard live={live} now={now} index={1} />
-                  <TotpCard index={2} />
+                  <BestPickCard
+                    profiles={profiles}
+                    now={now}
+                    busy={busy}
+                    index={1}
+                    onSwitch={doSwitch}
+                    onAdd={() => add.start('codex-login')}
+                    onConfigure={setConfiguring}
+                    onRepair={doRepair}
+                  />
+                  <FleetCard
+                    profiles={profiles}
+                    now={now}
+                    busy={busy}
+                    index={2}
+                    className="xl:col-span-3"
+                    onSwitch={doSwitch}
+                    onConfigure={setConfiguring}
+                    onRepair={doRepair}
+                  />
                   <UsageChartCard
                     profiles={profiles}
                     history={state.usageHistory}
                     index={3}
-                    className="lg:col-span-2"
+                    className="xl:col-span-2"
                   />
                   <HistoryCard
                     profiles={profiles}
@@ -230,27 +252,11 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
                     history={state.usageHistory}
                     index={4}
                   />
-                  <SwitchCard
-                    profiles={profiles}
-                    now={now}
-                    busy={busy}
-                    index={5}
-                    className="lg:col-span-2"
-                    onSwitch={doSwitch}
-                    onConfigure={setConfiguring}
-                  />
-                  <BackupsCard backups={backups} index={6} />
-                  <ConsoleCard add={add} index={7} className="lg:col-span-2 xl:col-span-3" />
                 </div>
               </>
             ) : view === 'accounts' ? (
               <>
-                <SummaryBar
-                  profiles={profiles}
-                  now={now}
-                  adding={add.busy}
-                  onAdd={() => add.start('codex-login')}
-                />
+                <SummaryBar profiles={profiles} now={now} />
                 <AccountsCard {...accountsProps} index={0} />
               </>
             ) : view === 'backups' ? (

@@ -17,6 +17,16 @@ export function untilReset(resetAt: string | null, now: number): string | null {
   return `${mins}m`
 }
 
+/** "vừa đọc xong" / "đọc 3p trước" — how old a cached quota figure is. */
+export function readAge(fetchedAt: string, now: number): string {
+  const mins = Math.max(0, Math.floor((now - new Date(fetchedAt).getTime()) / 60_000))
+  if (mins < 1) return 'vừa đọc xong'
+  if (mins < 60) return `đọc ${mins}p trước`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `đọc ${hours}h trước`
+  return `đọc ${Math.floor(hours / 24)} ngày trước`
+}
+
 export function quotaColour(usedPercent: number): string {
   if (usedPercent >= 90) return 'var(--color-bad)'
   if (usedPercent >= 65) return 'var(--color-warn)'

@@ -63,6 +63,12 @@ export interface AddAccount {
   busy: boolean
   /** Full flow: log in, wait for the browser confirmation, then save. */
   start: (action: 'codex-login' | 'codex-login-device') => Promise<void>
+  /**
+   * Re-login for a profile whose credential was revoked: same login flow, but
+   * the fresh credential is imported into the existing profile — keeping its
+   * name, config items and 2FA secret — instead of creating a new one.
+   */
+  repair: (profileId: string) => Promise<void>
   /** Run a codex command without capturing anything afterwards. */
   run: (action: string) => Promise<void>
   reset: () => void
@@ -93,8 +99,11 @@ export function useAddAccount({
   const [lines, setLines] = useState<string[]>([])
   const [jobId, setJobId] = useState<string | null>(null)
   const [openedIn, setOpenedIn] = useState('')
-  // Whether finishing the job should capture a profile, or just report.
-  const captureAfter = useRef(false)
+  // What finishing the job should do with the fresh credential: capture it as
+  // a new profile, import it into an existing one (repair), or nothing.
+  const captureTarget = useRef<{ kind: 'new' } | { kind: 'import'; profileId: string } | null>(
+    null
+  )
   // The device URL we already auto-opened, so a poll tick cannot open it twice.
   const opened = useRef('')
 
@@ -107,17 +116,30 @@ export function useAddAccount({
   }, [])
 
   const capture = useCallback(async () => {
+    const target = captureTarget.current
+    if (!target) {
+      setPhase('done')
+      setMessage('Xong.')
+      return
+    }
     setPhase('capturing')
     setMessage('Đang đọc credential và lưu profile…')
     try {
-      const result = await api.captureAccount({ categoryId, presetId })
-      onState(result.state)
-      setPhase('done')
-      setMessage(
-        result.duplicate
-          ? `Account này đã được lưu sẵn với tên “${result.duplicate}”.`
-          : `Đã lưu profile “${result.profile?.name}”.`
-      )
+      if (target.kind === 'new') {
+        const result = await api.captureAccount({ categoryId, presetId })
+        onState(result.state)
+        setPhase('done')
+        setMessage(
+          result.duplicate
+            ? `Account này đã được lưu sẵn với tên “${result.duplicate}”.`
+            : `Đã lưu profile “${result.profile?.name}”.`
+        )
+      } else {
+        const result = await api.importCurrent(target.profileId)
+        onState(result.state)
+        setPhase('done')
+        setMessage('Đã cập nhật credential mới — account này dùng lại được rồi.')
+      }
     } catch (err) {
       setPhase('error')
       setMessage(err instanceof Error ? err.message : String(err))
@@ -141,12 +163,7 @@ export function useAddAccount({
         clearInterval(timer)
         setJobId(null)
         if (job.code === 0) {
-          if (captureAfter.current) {
-            capture()
-          } else {
-            setPhase('done')
-            setMessage('Xong.')
-          }
+          capture()
         } else {
           setPhase('error')
           setMessage(`codex thoát với mã ${job.code}. Xem output bên dưới.`)
@@ -160,26 +177,32 @@ export function useAddAccount({
     return () => clearInterval(timer)
   }, [jobId, phase, capture, openUrl])
 
-  const launch = useCallback(async (action: string, withCapture: boolean) => {
-    captureAfter.current = withCapture
-    opened.current = ''
-    setOpenedIn('')
-    setLines([])
-    setPhase('running')
-    setMessage(
-      withCapture
-        ? 'Đang chạy codex login. Xác nhận trong cửa sổ ẩn danh vừa mở, rồi quay lại đây.'
-        : 'Đang chạy…'
-    )
-    try {
-      const job = await api.startJob(action)
-      setCommand(job.command)
-      setJobId(job.jobId)
-    } catch (err) {
-      setPhase('error')
-      setMessage(err instanceof Error ? err.message : String(err))
-    }
-  }, [])
+  const launch = useCallback(
+    async (
+      action: string,
+      target: { kind: 'new' } | { kind: 'import'; profileId: string } | null
+    ) => {
+      captureTarget.current = target
+      opened.current = ''
+      setOpenedIn('')
+      setLines([])
+      setPhase('running')
+      setMessage(
+        target
+          ? 'Đang chạy codex login. Xác nhận trong cửa sổ ẩn danh vừa mở, rồi quay lại đây.'
+          : 'Đang chạy…'
+      )
+      try {
+        const job = await api.startJob(action)
+        setCommand(job.command)
+        setJobId(job.jobId)
+      } catch (err) {
+        setPhase('error')
+        setMessage(err instanceof Error ? err.message : String(err))
+      }
+    },
+    []
+  )
 
   const prompt = phase === 'running' ? parseAuthPrompt(lines) : null
 
@@ -194,8 +217,9 @@ export function useAddAccount({
       if (prompt) openUrl(prompt.url)
     },
     busy: phase === 'running' || phase === 'capturing',
-    start: (action) => launch(action, true),
-    run: (action) => launch(action, false),
+    start: (action) => launch(action, { kind: 'new' }),
+    repair: (profileId) => launch('codex-login', { kind: 'import', profileId }),
+    run: (action) => launch(action, null),
     reset: () => {
       setPhase('idle')
       setMessage('')

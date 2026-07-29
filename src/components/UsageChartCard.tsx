@@ -68,48 +68,54 @@ export function UsageChartCard({
         right={<Chip>{total} điểm</Chip>}
       />
 
-      <div className="mt-4">
-        <Segmented<RangeId>
-          value={range}
-          onChange={setRange}
-          options={RANGES.map((r) => ({ id: r.id, label: r.label }))}
-        />
-      </div>
+      {series.length > 0 && (
+        <div className="mt-4">
+          <Segmented<RangeId>
+            value={range}
+            onChange={setRange}
+            options={RANGES.map((r) => ({ id: r.id, label: r.label }))}
+          />
+        </div>
+      )}
 
       {/* An empty chart should say why, not just sit there blank. */}
-      {series.length === 0 && failures.length > 0 && (
-        <ul className="mt-4 space-y-1.5">
+      {series.length === 0 ? (
+        <div className="mt-4 grow space-y-1.5">
           {failures.map((f) => (
-            <li
+            <p
               key={f.id}
               className="rounded-xl border border-bad/35 bg-bad/8 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-bad text-pretty"
             >
               <b className="font-semibold">{f.name}</b>: {f.message}
-            </li>
+            </p>
           ))}
-        </ul>
-      )}
+          <p className="rounded-xl border border-dashed border-line px-4 py-5 text-center text-[12.5px] leading-relaxed text-faint text-pretty">
+            Chưa có dữ liệu — mỗi lần đọc quota (tự động khi mở trang, sau đó ~5 phút/lần) thêm một
+            điểm vào chuỗi.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 grow">
+            <LineChart series={series} spanMs={span} />
+          </div>
 
-      <div className="mt-4 grow">
-        <LineChart series={series} spanMs={span} />
-      </div>
-
-      {series.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-3">
-          {series.map((s) => {
-            const last = s.points[s.points.length - 1]
-            return (
-              <li key={s.key} className="flex items-center gap-2 text-[11.5px]">
-                <span
-                  className="size-2 shrink-0 rounded-[3px]"
-                  style={{ background: s.colour }}
-                />
-                <span className="max-w-[160px] truncate text-dim">{s.label}</span>
-                <span className="tnum font-medium">đã dùng {Math.round(last.used)}%</span>
-              </li>
-            )
-          })}
-        </ul>
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-3">
+            {series.map((s) => {
+              const last = s.points[s.points.length - 1]
+              return (
+                <li key={s.key} className="flex items-center gap-2 text-[11.5px]">
+                  <span
+                    className="size-2 shrink-0 rounded-[3px]"
+                    style={{ background: s.colour }}
+                  />
+                  <span className="max-w-[160px] truncate text-dim">{s.label}</span>
+                  <span className="tnum font-medium">đã dùng {Math.round(last.used)}%</span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
     </Card>
   )

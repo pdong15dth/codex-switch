@@ -1,4 +1,4 @@
-import type { UsageSnapshot, UsageWindow } from '@/types'
+import type { UsageError, UsageSnapshot, UsageWindow } from '@/types'
 
 /** The endpoint the Codex CLI itself polls for rate-limit state. */
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -115,4 +115,19 @@ export function windowLabel(seconds: number): string {
   if (hours < 24) return `${hours} giờ`
   const days = Math.round(hours / 24)
   return `${days} ngày`
+}
+
+/**
+ * Errors that mean the stored credential is dead and only a re-login can fix
+ * it — as opposed to network/403/429 noise that clears on the next read.
+ */
+const DEAD_CREDENTIAL = new Set([
+  'refresh_failed',
+  'token_revoked',
+  'token_invalidated',
+  'http_401'
+])
+
+export function isDeadCredentialError(error: UsageError | null): boolean {
+  return error !== null && DEAD_CREDENTIAL.has(error.code)
 }

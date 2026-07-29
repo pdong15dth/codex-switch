@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { IconArrowRight, IconCheck, IconKey, IconLogout, IconRefresh, IconTerminal } from './icons'
+import { IconArrowRight, IconCheck, IconKey, IconRefresh, IconTerminal } from './icons'
 import { Button, Card, CardHead, Pill } from './ui'
 import type { AddAccount } from './useAddAccount'
 
@@ -77,10 +77,6 @@ export function ConsoleCard({
         <Button variant="pill" onClick={() => add.run('codex-status')} disabled={add.busy}>
           <IconRefresh className="size-[14px]" />
           Status
-        </Button>
-        <Button variant="pill" onClick={() => add.run('codex-logout')} disabled={add.busy}>
-          <IconLogout className="size-[14px]" />
-          Logout
         </Button>
       </div>
 
