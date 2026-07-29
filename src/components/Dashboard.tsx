@@ -10,6 +10,7 @@ import { ConsoleCard } from './Console'
 import { CreateProfileDialog } from './CreateProfileDialog'
 import { EmptyState } from './EmptyState'
 import { ItemsModal } from './ItemsModal'
+import { ProxyCard } from './ProxyCard'
 import { Rail, type View } from './Rail'
 import { SwitchResultDialog } from './SwitchResultDialog'
 import { TopBar } from './TopBar'
@@ -186,7 +187,11 @@ export function Dashboard({ initialState }: { initialState: StateView }) {
               </div>
             )}
 
-            {profiles.length === 0 ? (
+            {view === 'proxy' ? (
+              /* Proxy stands alone: it manages CLIProxyAPI's own account pool,
+                 which exists even when no profile is saved here yet. */
+              <ProxyCard index={0} />
+            ) : profiles.length === 0 ? (
               /* Nothing saved yet: onboarding plus the two things needed right
                  now — the login flow, and the 2FA code that login will ask for. */
               <div className="grid gap-4 xl:grid-cols-3">

@@ -44,13 +44,16 @@ export async function loadState(): Promise<AppState> {
   try {
     const parsed = JSON.parse(await readFile(STATE_FILE, 'utf8')) as AppState
     return {
+      // Spread first so fields added by newer versions survive a downgrade.
+      ...parsed,
       schemaVersion: parsed.schemaVersion ?? SCHEMA_VERSION,
       categories: parsed.categories ?? [],
       profiles: parsed.profiles ?? [],
       activeProfileIds: parsed.activeProfileIds ?? {},
       usage: parsed.usage ?? {},
       usageHistory: parsed.usageHistory ?? {},
-      usageErrors: parsed.usageErrors ?? {}
+      usageErrors: parsed.usageErrors ?? {},
+      proxy: parsed.proxy ?? { apiKey: '', strategy: 'round-robin', accounts: [] }
     }
   } catch {
     const fresh = seedState()

@@ -122,6 +122,8 @@ export interface AppState {
   usageHistory?: Record<string, UsagePoint[]>
   /** accountKey → why the last quota read failed, if it did. */
   usageErrors?: Record<string, UsageError>
+  /** Built-in Codex proxy pool — separate from profiles on purpose. */
+  proxy?: ProxyPoolState
 }
 
 // ── View models sent to the browser ───────────────────────────────
@@ -229,4 +231,107 @@ export interface StateView {
   backups: BackupEntry[]
   /** accountKey → quota series, for the usage chart. */
   usageHistory: Record<string, UsagePoint[]>
+}
+
+// ── Built-in Codex proxy pool ─────────────────────────────────────
+// The pool serves the OpenAI-compatible endpoints under /v1/* using Codex
+// (ChatGPT OAuth) sessions it owns outright. It is deliberately separate
+// from profiles: profiles back manual switching, the pool backs the proxy.
+
+export type ProxyAccountStatus = 'active' | 'cooldown' | 'dead'
+export type ProxyStrategy = 'round-robin' | 'fill-first'
+export type ProxyProvider = 'codex' | 'antigravity'
+
+export interface ProxyPoolTokens {
+  accessToken: string
+  refreshToken: string
+  idToken?: string
+  /** Access-token expiry read from the JWT; null when undecodable. */
+  expiresAt?: string | null
+}
+
+export interface ProxyUsageCounters {
+  requests: number
+  failed: number
+  inputTokens: number
+  outputTokens: number
+}
+
+export interface ProxyPoolAccount {
+  id: string
+  provider: ProxyProvider
+  email: string
+  /** Codex: the ChatGPT account id. Antigravity: the GCP project id. */
+  accountId: string
+  tokens: ProxyPoolTokens
+  status: ProxyAccountStatus
+  cooldownUntil?: string | null
+  lastError?: string | null
+  usage: ProxyUsageCounters
+  addedAt: string
+}
+
+export interface ProxyPoolState {
+  /** Inbound bearer key for /v1/*, generated on first use. */
+  apiKey: string
+  strategy: ProxyStrategy
+  accounts: ProxyPoolAccount[]
+}
+
+/** Session JSON in CLIProxyAPI's CodexTokenStorage format. */
+export interface CodexSessionFile {
+  id_token?: string
+  access_token?: string
+  refresh_token?: string
+  account_id?: string
+  last_refresh?: string
+  email?: string
+  type?: string
+  expired?: string
+}
+
+/** Session JSON in CLIProxyAPI's AntigravityTokenStorage format. */
+export interface AntigravitySessionFile {
+  access_token?: string
+  refresh_token?: string
+  email?: string
+  project_id?: string
+  expired?: string
+  expires_in?: number
+  type?: string
+  disabled?: boolean
+}
+
+// ── Proxy view models sent to the browser ─────────────────────────
+
+export interface ProxyAccountView {
+  id: string
+  provider: ProxyProvider
+  email: string
+  status: ProxyAccountStatus
+  cooldownUntil?: string | null
+  lastError?: string | null
+  tokenExpiresAt?: string | null
+  usage: ProxyUsageCounters
+}
+
+export interface ProxyView {
+  /** The pool runs inside this server, so it is up whenever the app is. */
+  running: true
+  version: string
+  baseUrl: string
+  strategy: ProxyStrategy
+  /** Full inbound key — localhost-only app; the UI masks it until revealed. */
+  apiKey: string
+  accounts: ProxyAccountView[]
+}
+
+/** One entry of the in-memory request ring buffer. */
+export interface ProxyLogEntry {
+  at: string
+  provider: ProxyProvider
+  account: string
+  model: string
+  status: number
+  message: string
 }

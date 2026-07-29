@@ -4,7 +4,7 @@ import { join } from 'node:path'
 export const HOME = homedir()
 export const IS_WINDOWS = platform() === 'win32'
 
-export const DATA_DIR = join(HOME, '.codex-switch')
+export const DATA_DIR = process.env.CODEX_SWITCH_DATA_DIR ?? join(HOME, '.codex-switch')
 export const STATE_FILE = join(DATA_DIR, 'state.json')
 export const BACKUP_DIR = join(DATA_DIR, 'backups')
 

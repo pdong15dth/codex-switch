@@ -7,7 +7,8 @@ const TITLES: Record<string, { title: string; sub: string }> = {
   overview: { title: 'Tổng quan', sub: 'quota còn lại và thời điểm reset của từng account' },
   accounts: { title: 'Danh sách', sub: 'tất cả profile trong một bảng' },
   backups: { title: 'Backups', sub: 'mỗi lần switch tạo một bản backup' },
-  console: { title: 'Thêm account', sub: 'login bằng Codex CLI rồi lưu thành profile' }
+  console: { title: 'Thêm account', sub: 'login bằng Codex CLI rồi lưu thành profile' },
+  proxy: { title: 'Proxy', sub: 'CLIProxyAPI điều phối nhiều account qua một endpoint' }
 }
 
 /** `now` is owned by Dashboard so every card reads the same tick. */

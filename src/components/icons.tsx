@@ -51,6 +51,15 @@ export const IconTerminal = (p: Props) => (
   </Svg>
 )
 
+export const IconProxy = (p: Props) => (
+  <Svg {...p}>
+    <circle cx="12" cy="5.5" r="2.3" />
+    <circle cx="5.5" cy="18" r="2.3" />
+    <circle cx="18.5" cy="18" r="2.3" />
+    <path d="M10.9 7.4 6.6 16M13.1 7.4l4.3 8.6M7.8 18h8.4" />
+  </Svg>
+)
+
 export const IconSettings = (p: Props) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="2.8" />

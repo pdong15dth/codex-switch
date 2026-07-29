@@ -7,19 +7,21 @@ import {
   IconKey,
   IconOverview,
   IconPlus,
+  IconProxy,
   IconTerminal
 } from './icons'
 import { Avatar } from './ui'
 import type { Category, ProfileView } from '@/types'
 
-export type View = 'overview' | 'accounts' | 'backups' | 'console'
+export type View = 'overview' | 'accounts' | 'backups' | 'console' | 'proxy'
 
 // Overview is a card per account; "Danh sách" is the same data as a dense table.
 const MAIN: { id: View; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'overview', label: 'Tổng quan', Icon: IconOverview },
   { id: 'accounts', label: 'Danh sách', Icon: IconAccounts },
   { id: 'backups', label: 'Backups', Icon: IconArchive },
-  { id: 'console', label: 'Thêm account', Icon: IconTerminal }
+  { id: 'console', label: 'Thêm account', Icon: IconTerminal },
+  { id: 'proxy', label: 'Proxy', Icon: IconProxy }
 ]
 
 function NavItem({

@@ -1,4 +1,4 @@
-import type { Preset, StateView, SwitchResult } from '@/types'
+import type { Preset, ProxyLogEntry, ProxyView, StateView, SwitchResult } from '@/types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -87,5 +87,30 @@ export const api = {
     req<{ jobId: string; command: string }>('/api/jobs', { method: 'POST', ...json({ action }) }),
 
   job: (id: string) =>
-    req<{ lines: string[]; done: boolean; code: number | null; command: string }>(`/api/jobs/${id}`)
+    req<{ lines: string[]; done: boolean; code: number | null; command: string }>(`/api/jobs/${id}`),
+
+  /** Proxy pool status + accounts (pool chạy ngay trong server này). */
+  proxyStatus: () => req<ProxyView>('/api/proxy/status'),
+
+  /** Xoá cooldown của một account trong pool. */
+  proxyResetQuota: (id: string) =>
+    req<{ ok: boolean }>('/api/proxy/accounts/reset-quota', { method: 'POST', ...json({ id }) }),
+
+  /** Request/token counters per pool account. */
+  proxyUsage: () =>
+    req<{
+      byAccount: Record<
+        string,
+        { email: string; requests: number; failed: number; inputTokens: number; outputTokens: number }
+      >
+    }>('/api/proxy/usage'),
+
+  /** 50 request gần nhất qua pool. */
+  proxyLogs: () => req<{ logs: ProxyLogEntry[] }>('/api/proxy/logs'),
+
+  /** Current routing strategy between pool accounts. */
+  proxyRouting: () => req<{ strategy: string }>('/api/proxy/routing'),
+
+  proxySetRouting: (strategy: string) =>
+    req<{ strategy: string }>('/api/proxy/routing', { method: 'PUT', ...json({ strategy }) })
 }
