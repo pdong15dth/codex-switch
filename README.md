@@ -11,6 +11,61 @@ npm run dev
 
 Mở http://127.0.0.1:6677
 
+## Menu bar macOS
+
+App companion native Swift nằm trong `menubar/`. Build thủ công bằng:
+
+```bash
+npm run menubar
+open menubar/CodexSwitchBar.app
+```
+
+Icon `⚡` trên menu bar hiển thị quota còn lại của account đang dùng. Popover có:
+
+- Hai cửa sổ quota của account hiện tại, thời gian reset và độ tươi dữ liệu.
+- Danh sách account dự phòng xếp theo quota.
+- Nút **Đổi sang** ngay trên từng account.
+- Làm mới quota, mở dashboard và đường dẫn đăng nhập lại khi token bị thu hồi.
+
+Menu bar đọc trạng thái mỗi 30 giây và sweep quota mỗi 5 phút. Sweep cũng lưu lại cặp token mới
+sau khi refresh, nên chuỗi refresh token của các profile không bị cũ khi browser dashboard đóng.
+
+## Tự chạy khi đăng nhập macOS
+
+Chạy một lệnh để build production và cài hai LaunchAgent:
+
+```bash
+npm run autostart:install
+```
+
+Từ lần đăng nhập macOS tiếp theo:
+
+1. `local.codexswitch.server` chạy `next start` tại `127.0.0.1:6677`.
+2. `local.codexswitch.menubar` mở `CodexSwitchBar.app`.
+3. Server được tự khởi động lại nếu chết. Menu bar tự mở lại nếu crash, nhưng tôn trọng khi người
+   dùng bấm **Thoát** và sẽ chỉ mở lại ở lần đăng nhập tiếp theo.
+
+Không cần build lại sau khi restart máy. Chỉ chạy lại `autostart:install` sau khi source thay đổi.
+
+```bash
+npm run autostart:status
+npm run autostart:install
+npm run autostart:uninstall
+```
+
+Hai file được cài vào `~/Library/LaunchAgents/`; log nằm ở `~/.codex-switch/logs/`. Khi cần kiểm
+tra:
+
+```bash
+tail -f ~/.codex-switch/logs/server.log
+tail -f ~/.codex-switch/logs/server.error.log
+tail -f ~/.codex-switch/logs/menubar.error.log
+```
+
+Các agent chạy bằng chính user macOS hiện tại, không qua Docker, và dùng trực tiếp
+`~/.codex-switch` cùng `~/.codex`. Vì vậy profile, active account và quyền file giữ nguyên.
+`autostart:uninstall` chỉ gỡ LaunchAgent, không xoá profile, credential hay backup.
+
 ## Ý tưởng
 
 Kiến trúc lấy từ [xoay-config](https://github.com/lploc94/xoay-config): một **profile** là tập
@@ -60,7 +115,7 @@ thật. Nên nó luôn đúng, kể cả khi bạn login bằng `codex` trực t
 | Tổng quan | Account đang dùng, số liệu, đồng hồ token, lịch sử switch, bảng account, console |
 | Accounts | Bảng đầy đủ + trạng thái capture của từng file |
 | Backups | Lịch sử switch, mỗi lần một bản backup |
-| Console | Chạy `codex login` / `status` / `logout` và xem output |
+| Console | Chạy `codex login` / `status` và xem output |
 
 Nhóm tool ở mục **TOOLS** trong sidebar quyết định đang xem Codex CLI hay Claude Code.
 
@@ -92,21 +147,24 @@ Nhóm tool ở mục **TOOLS** trong sidebar quyết định đang xem Codex CLI
 Nội dung `auth.json` được lưu **plaintext** trong `state.json` — giống như cách Codex CLI lưu
 `~/.codex/auth.json`. Những điểm đã xử lý:
 
-- Server **chỉ bind `127.0.0.1`** (`next dev -H 127.0.0.1`), không nghe trên `0.0.0.0`.
+- Server **chỉ bind `127.0.0.1`** (`next dev` và `next start`), không nghe trên `0.0.0.0`.
 - API **không trả token thô** về browser. Chỉ trả `auth_mode` + identity đã suy ra: email đọc
   từ payload của `id_token`, hoặc API key dạng `sk-pro…a1b4`.
 - Job runner chỉ chạy các lệnh **whitelist** (`codex login`, `login --device-auth`,
-  `login status`, `logout`). Không có gì từ request đi vào argv.
+  `login status`). Không có gì từ request đi vào argv.
 - Backup trước mỗi lần ghi, atomic write, rollback khi lỗi.
 
 Đừng commit `~/.codex-switch/`. Đừng expose port này ra ngoài máy.
 
 ### Token OAuth sẽ hết hạn
 
-`access_token` của chế độ `chatgpt` có thời hạn và Codex tự refresh — nghĩa là `auth.json` thay
-đổi sau mỗi lần refresh, và profile sẽ hiện *khác đĩa*. Đó là bình thường. Nếu một snapshot cũ
-tới mức refresh token cũng hết hiệu lực, switch sang nó sẽ phải login lại; khi đó dùng
-**Import từ đĩa** để làm mới. Cột *token hết hạn* trên mỗi profile đọc từ `id_token`.
+`access_token` của chế độ `chatgpt` có thời hạn. Trước khi đọc quota hoặc switch, app tự refresh
+khi cần rồi lưu lại cặp token mới vào profile; với account đang live, file `~/.codex/auth.json`
+cũng được cập nhật để không đứt chuỗi token rotation.
+
+Không chạy `codex logout` để đổi account: Codex CLI thu hồi refresh token phía server và làm bản
+đang lưu trong profile chết theo. Dùng nút switch của app. Nếu token đã bị thu hồi, bấm
+**Đăng nhập lại** trên dashboard để import credential mới vào đúng profile cũ.
 
 ## API
 
@@ -123,6 +181,7 @@ tới mức refresh token cũng hết hiệu lực, switch sang nó sẽ phải 
 | `POST` | `/api/profiles/:id/import` | Chụp config trên đĩa vào profile |
 | `POST` | `/api/jobs` | Chạy lệnh auth của Codex |
 | `GET` | `/api/jobs/:id` | Poll output |
+| `POST` | `/api/usage` | Refresh credential khi cần và cập nhật quota mọi profile |
 
 ## Thêm tool khác
 

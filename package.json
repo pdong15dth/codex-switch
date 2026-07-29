@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 6677",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint"
+    "lint": "eslint",
+    "menubar": "bash menubar/build.sh",
+    "autostart:install": "bash scripts/autostart.sh install",
+    "autostart:status": "bash scripts/autostart.sh status",
+    "autostart:uninstall": "bash scripts/autostart.sh uninstall"
   },
   "dependencies": {
     "next": "16.2.12",

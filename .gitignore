@@ -43,3 +43,6 @@ next-env.d.ts
 # Local credential snapshots must never be committed.
 state.json
 backups/
+
+# Built menu bar app
+menubar/CodexSwitchBar.app/
