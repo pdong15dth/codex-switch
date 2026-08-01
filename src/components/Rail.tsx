@@ -15,7 +15,7 @@ import type { Category, ProfileView } from '@/types'
 
 export type View = 'overview' | 'accounts' | 'backups' | 'console' | 'proxy'
 
-// Overview is a card per account; "Danh sách" is the same data as a dense table.
+// Overview ranks accounts by quota; "Danh sách" is the same cards with filters.
 const MAIN: { id: View; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'overview', label: 'Tổng quan', Icon: IconOverview },
   { id: 'accounts', label: 'Danh sách', Icon: IconAccounts },

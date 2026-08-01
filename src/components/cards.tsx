@@ -1,7 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { IconArchive, IconArrowRight, IconClock, IconPlus, IconRefresh, IconSearch } from './icons'
+import { useState, type ReactNode } from 'react'
+import {
+  IconArchive,
+  IconArrowRight,
+  IconClock,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
+  IconSettings,
+  IconTrash
+} from './icons'
 import { QuotaBar, QuotaGauge, quotaColour, readAge, untilReset } from './quota'
 import {
   Avatar,
@@ -41,6 +50,35 @@ const mainWindow = (p: ProfileView) => p.usage?.primary ?? p.usage?.secondary ??
 const quotaLeft = (p: ProfileView): number | null => {
   const w = mainWindow(p)
   return w ? 100 - w.usedPercent : null
+}
+
+/** Small ghost icon button for secondary actions next to the primary one. */
+function IconAction({
+  label,
+  danger = false,
+  className = '',
+  onClick,
+  children
+}: {
+  label: string
+  danger?: boolean
+  className?: string
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`inline-flex cursor-pointer items-center justify-center rounded-lg p-1.5 transition-all duration-200 ease-[var(--ease-spring)] hover:bg-raised active:scale-[0.94] ${
+        danger ? 'text-faint hover:text-bad' : 'text-faint hover:text-fg'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  )
 }
 
 // ── Summary strip ─────────────────────────────────────────────────
@@ -389,12 +427,153 @@ export function BestPickCard({
   )
 }
 
+// ── Account tile: one account as a mini-card ──────────────────────
+
+/** Handlers every account tile can trigger. */
+interface TileActions {
+  busy: boolean
+  onSwitch: (id: string) => void
+  onConfigure: (id: string) => void
+  onRepair: (id: string) => void
+  onRecapture: (id: string) => void
+  onDelete: (id: string, name: string) => void
+}
+
+/** One account as a mini-card: identity and plan, quota, then its actions. */
+function AccountTile({
+  p,
+  now,
+  busy,
+  onSwitch,
+  onConfigure,
+  onRepair,
+  onRecapture,
+  onDelete
+}: { p: ProfileView; now: number } & TileActions) {
+  const state = rowState(p)
+  const pill = STATE_PILL[state]
+  const w = mainWindow(p)
+  const left = w ? Math.round(100 - w.usedPercent) : null
+  const stale = p.usage ? now - new Date(p.usage.fetchedAt).getTime() > 30 * 60_000 : false
+  const dead = isDeadCredentialError(p.usageError)
+
+  return (
+    <li
+      className={`flex flex-col rounded-xl border p-4 transition-colors ${
+        state === 'live'
+          ? 'border-accent/25 bg-accent/6'
+          : 'border-line/70 bg-raised/40 hover:border-line2'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Avatar name={p.name} size={34} />
+        <div className="min-w-0 grow">
+          <div className="truncate text-[13.5px] font-medium">{p.name}</div>
+          <div
+            className="truncate font-mono text-[11px] text-faint"
+            title={p.identity?.label ?? ''}
+          >
+            {p.identity?.label ?? '—'}
+          </div>
+        </div>
+        <Pill tone={pill.tone}>{pill.label}</Pill>
+      </div>
+
+      {p.identity?.plan && (
+        <div className="mt-2.5">
+          <Pill>{p.identity.plan}</Pill>
+        </div>
+      )}
+
+      <div className="mt-4 grow">
+        {w && left !== null ? (
+          <>
+            <div className="flex items-baseline justify-between gap-2">
+              <span
+                className="tnum text-[18px] font-semibold tracking-[-0.02em]"
+                style={{ color: quotaColour(w.usedPercent) }}
+              >
+                còn {left}%
+              </span>
+              <span className="text-[10.5px] text-faint">{windowLabel(w.windowSeconds)}</span>
+            </div>
+            <div className="mt-2 h-[4px] overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full rounded-full transition-[width] duration-700 ease-[var(--ease-spring)]"
+                style={{
+                  width: `${Math.max(2, left)}%`,
+                  background: quotaColour(w.usedPercent)
+                }}
+              />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[10.5px]">
+              <span className="text-faint">
+                {w.resetAt ? `reset sau ${untilReset(w.resetAt, now)}` : ''}
+              </span>
+              {p.usage && (
+                <span className={stale ? 'text-warn/80' : 'text-faint'}>
+                  {readAge(p.usage.fetchedAt, now)}
+                </span>
+              )}
+            </div>
+          </>
+        ) : p.usageError ? (
+          <p className="truncate text-[11.5px] text-bad/90" title={p.usageError.message}>
+            {p.usageError.message}
+          </p>
+        ) : (
+          <p className="text-[11.5px] text-faint">chưa có dữ liệu quota</p>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center gap-1 border-t border-line/60 pt-3">
+        {dead ? (
+          <Button
+            variant="pill"
+            className="text-warn"
+            onClick={() => onRepair(p.id)}
+            disabled={busy}
+          >
+            <IconRefresh className="size-[13px] shrink-0" />
+            Đăng nhập lại
+          </Button>
+        ) : state === 'uncaptured' ? (
+          <Button variant="pill" onClick={() => onConfigure(p.id)}>
+            Cấu hình
+          </Button>
+        ) : state === 'live' ? (
+          <Button variant="pill" onClick={() => onRecapture(p.id)} disabled={busy}>
+            <IconRefresh className="size-[13px] shrink-0" />
+            Cập nhật
+          </Button>
+        ) : (
+          <Button variant="pill" onClick={() => onSwitch(p.id)} disabled={busy}>
+            Đổi sang
+            <IconArrowRight className="size-[13px] shrink-0" />
+          </Button>
+        )}
+
+        <span className="grow" />
+
+        {state !== 'uncaptured' && (
+          <IconAction label={`Cấu hình ${p.name}`} onClick={() => onConfigure(p.id)}>
+            <IconSettings className="size-[14px]" />
+          </IconAction>
+        )}
+        <IconAction label={`Xoá ${p.name}`} danger onClick={() => onDelete(p.id, p.name)}>
+          <IconTrash className="size-[14px]" />
+        </IconAction>
+      </div>
+    </li>
+  )
+}
+
 // ── Fleet board: quota of every account ───────────────────────────
 
 /**
  * Every account ranked by quota remaining, live pinned on top. The overview's
- * centrepiece: "toàn bộ account ra sao?" answered on one row per account,
- * each with its switch action attached.
+ * centrepiece: "toàn bộ account ra sao?" answered as one card per account in
+ * a grid, each with its primary action plus configure/delete icon buttons.
  */
 export function FleetCard({
   profiles,
@@ -404,7 +583,9 @@ export function FleetCard({
   className = '',
   onSwitch,
   onConfigure,
-  onRepair
+  onRepair,
+  onRecapture,
+  onDelete
 }: {
   profiles: ProfileView[]
   now: number
@@ -414,6 +595,8 @@ export function FleetCard({
   onSwitch: (id: string) => void
   onConfigure: (id: string) => void
   onRepair: (id: string) => void
+  onRecapture: (id: string) => void
+  onDelete: (id: string, name: string) => void
 }) {
   const rows = [...profiles].sort((a, b) => {
     if (a.active !== b.active) return a.active ? -1 : 1
@@ -424,6 +607,7 @@ export function FleetCard({
     if (lb === null) return -1
     return lb - la
   })
+  const tile: TileActions = { busy, onSwitch, onConfigure, onRepair, onRecapture, onDelete }
 
   return (
     <Card className={`p-5 ${className}`} index={index}>
@@ -433,115 +617,16 @@ export function FleetCard({
         right={<Chip>{profiles.length}</Chip>}
       />
 
-      <ul className="mt-4 grow space-y-2">
-        {rows.map((p) => {
-          const state = rowState(p)
-          const pill = STATE_PILL[state]
-          const w = mainWindow(p)
-          const left = w ? Math.round(100 - w.usedPercent) : null
-          const stale = p.usage ? now - new Date(p.usage.fetchedAt).getTime() > 30 * 60_000 : false
-          const dead = isDeadCredentialError(p.usageError)
-
-          return (
-            <li
-              key={p.id}
-              className={`flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border px-4 py-3 transition-colors ${
-                state === 'live'
-                  ? 'border-accent/25 bg-accent/6'
-                  : 'border-line/70 bg-raised/40 hover:border-line2'
-              }`}
-            >
-              <Avatar name={p.name} size={34} />
-
-              <div className="w-[170px] min-w-0 shrink-0">
-                <div className="truncate text-[13.5px] font-medium">{p.name}</div>
-                <div
-                  className="truncate font-mono text-[11px] text-faint"
-                  title={p.identity?.label ?? ''}
-                >
-                  {p.identity?.label ?? '—'}
-                </div>
-              </div>
-
-              {p.identity?.plan && <Pill>{p.identity.plan}</Pill>}
-
-              <span className="grow" />
-
-              {w && left !== null ? (
-                <div className="w-[190px] shrink-0">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="tnum text-[13px] font-semibold"
-                      style={{ color: quotaColour(w.usedPercent) }}
-                    >
-                      còn {left}%
-                    </span>
-                    <span className="text-[10.5px] text-faint">{windowLabel(w.windowSeconds)}</span>
-                  </div>
-                  <div className="mt-1.5 h-[4px] overflow-hidden rounded-full bg-line">
-                    <div
-                      className="h-full rounded-full transition-[width] duration-700 ease-[var(--ease-spring)]"
-                      style={{
-                        width: `${Math.max(2, left)}%`,
-                        background: quotaColour(w.usedPercent)
-                      }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 text-[10.5px]">
-                    <span className="text-faint">
-                      {w.resetAt ? `reset sau ${untilReset(w.resetAt, now)}` : ''}
-                    </span>
-                    {p.usage && (
-                      <span className={stale ? 'text-warn/80' : 'text-faint'}>
-                        {readAge(p.usage.fetchedAt, now)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : p.usageError ? (
-                <span
-                  className="w-[190px] shrink-0 truncate text-[11.5px] text-bad/90"
-                  title={p.usageError.message}
-                >
-                  {p.usageError.message}
-                </span>
-              ) : (
-                <span className="w-[190px] shrink-0 text-[11.5px] text-faint">
-                  chưa có dữ liệu quota
-                </span>
-              )}
-
-              <Pill tone={pill.tone}>{pill.label}</Pill>
-
-              {dead ? (
-                <Button
-                  variant="pill"
-                  className="text-warn"
-                  onClick={() => onRepair(p.id)}
-                  disabled={busy}
-                >
-                  <IconRefresh className="size-[13px] shrink-0" />
-                  Đăng nhập lại
-                </Button>
-              ) : state === 'uncaptured' ? (
-                <Button variant="pill" onClick={() => onConfigure(p.id)}>
-                  Cấu hình
-                </Button>
-              ) : state !== 'live' ? (
-                <Button variant="pill" onClick={() => onSwitch(p.id)} disabled={busy}>
-                  Đổi sang
-                  <IconArrowRight className="size-[13px] shrink-0" />
-                </Button>
-              ) : null}
-            </li>
-          )
-        })}
+      <ul className="mt-4 grid grow content-start gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+        {rows.map((p) => (
+          <AccountTile key={p.id} p={p} now={now} {...tile} />
+        ))}
       </ul>
     </Card>
   )
 }
 
-// ── Full table (list view) ────────────────────────────────────────
+// ── All accounts, filterable (list view) ──────────────────────────
 
 type Tab = 'all' | 'ready' | 'attention'
 
@@ -552,6 +637,8 @@ export function AccountsCard({
   onSwitch,
   onRecapture,
   onConfigure,
+  onRepair,
+  onDelete,
   index,
   className = ''
 }: {
@@ -561,6 +648,8 @@ export function AccountsCard({
   onSwitch: (id: string) => void
   onRecapture: (id: string) => void
   onConfigure: (id: string) => void
+  onRepair: (id: string) => void
+  onDelete: (id: string, name: string) => void
   index: number
   className?: string
 }) {
@@ -576,6 +665,7 @@ export function AccountsCard({
       if (!q) return true
       return p.name.toLowerCase().includes(q) || (p.identity?.label ?? '').toLowerCase().includes(q)
     })
+  const tile: TileActions = { busy, onSwitch, onConfigure, onRepair, onRecapture, onDelete }
 
   return (
     <Card className={`p-5 ${className}`} index={index}>
@@ -600,90 +690,17 @@ export function AccountsCard({
         />
       </div>
 
-      <div className="mt-4 grow overflow-x-auto">
-        <table className="w-full min-w-[680px] border-collapse text-left">
-          <thead>
-            <tr className="text-[10.5px] tracking-[0.1em] text-faint uppercase">
-              <th className="pb-2 font-medium">account</th>
-              <th className="pb-2 font-medium">plan</th>
-              <th className="pb-2 font-medium">quota còn lại</th>
-              <th className="pb-2 font-medium">reset sau</th>
-              <th className="pb-2 font-medium">trạng thái</th>
-              <th className="pb-2 text-right font-medium">hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-[13px] text-faint">
-                  Không có account nào khớp.
-                </td>
-              </tr>
-            )}
-            {rows.map((p) => {
-              const state = rowState(p)
-              const pill = STATE_PILL[state]
-              const w = mainWindow(p)
-              return (
-                <tr
-                  key={p.id}
-                  className={`group border-t border-line/70 transition-colors ${
-                    state === 'live' ? 'bg-accent/4' : 'hover:bg-raised/40'
-                  }`}
-                >
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={p.name} size={30} />
-                      <div className="min-w-0">
-                        <div className="truncate text-[13px] font-medium">{p.name}</div>
-                        <div className="truncate font-mono text-[11px] text-faint">
-                          {p.identity?.label ?? '—'}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4 text-[12.5px] text-dim">{p.identity?.plan ?? '—'}</td>
-                  <td className="tnum py-3 pr-4 text-[12.5px]">
-                    {w ? `${Math.round(100 - w.usedPercent)}%` : '—'}
-                  </td>
-                  <td className="tnum py-3 pr-4 text-[12px] text-dim">
-                    {w?.resetAt ? untilReset(w.resetAt, now) : '—'}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <Pill tone={pill.tone}>{pill.label}</Pill>
-                  </td>
-                  <td className="py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {state === 'live' ? (
-                        <Button variant="pill" onClick={() => onRecapture(p.id)} disabled={busy}>
-                          <IconRefresh className="size-[13px]" />
-                          Cập nhật
-                        </Button>
-                      ) : state === 'uncaptured' ? (
-                        <Button variant="pill" onClick={() => onConfigure(p.id)}>
-                          Cấu hình
-                        </Button>
-                      ) : (
-                        <Button variant="pill" onClick={() => onSwitch(p.id)} disabled={busy}>
-                          đổi sang
-                          <IconArrowRight className="size-[13px]" />
-                        </Button>
-                      )}
-                      <button
-                        onClick={() => onConfigure(p.id)}
-                        aria-label={`Cấu hình ${p.name}`}
-                        className="cursor-pointer rounded-md px-1.5 py-1 text-[13px] text-faint opacity-0 transition-all group-hover:opacity-100 hover:bg-raised hover:text-fg focus-visible:opacity-100"
-                      >
-                        ⋯
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {rows.length === 0 ? (
+        <p className="mt-4 grow rounded-xl border border-dashed border-line px-4 py-8 text-center text-[13px] text-faint">
+          Không có account nào khớp.
+        </p>
+      ) : (
+        <ul className="mt-4 grid grow content-start gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {rows.map((p) => (
+            <AccountTile key={p.id} p={p} now={now} {...tile} />
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }
