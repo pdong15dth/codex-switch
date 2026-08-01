@@ -27,7 +27,7 @@ find_runtime() {
   fi
 
   RUNTIME_BIN_DIR="$(dirname "$NODE_BIN")"
-  RUNTIME_PATH="$RUNTIME_BIN_DIR:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+  RUNTIME_PATH="$HOME/.local/bin:$HOME/bin:$RUNTIME_BIN_DIR:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 }
 
 is_loaded() {

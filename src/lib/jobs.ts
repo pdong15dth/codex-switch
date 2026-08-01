@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { delimiter, join } from 'node:path'
+import { HOME } from './paths'
 import { prepareLoginSlot, settleLoginSlot } from './login-slot'
 
 export interface Job {
@@ -23,6 +25,22 @@ const jobs = store.__codexSwitchJobs
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g')
 
 const stripAnsi = (s: string) => s.replace(ANSI, '')
+
+/**
+ * The dashboard often runs under launchd/systemd with a bare PATH, while
+ * user-level CLIs live in ~/.local/bin (codex standalone) or Homebrew/npm
+ * prefixes — spawn with an augmented PATH so `codex` / `claude` resolve.
+ */
+const jobEnv = (): NodeJS.ProcessEnv => ({
+  ...process.env,
+  PATH: [
+    join(HOME, '.local', 'bin'),
+    join(HOME, 'bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    process.env.PATH ?? ''
+  ].join(delimiter)
+})
 
 /**
  * Whitelisted commands only — nothing from the request reaches the argv.
@@ -56,7 +74,7 @@ export async function startJob(action: string): Promise<Job> {
   jobs.set(job.id, job)
 
   // shell:true so Windows resolves codex.exe / claude.exe from PATH.
-  const child = spawn(spec.bin, spec.args, { shell: true, windowsHide: true })
+  const child = spawn(spec.bin, spec.args, { shell: true, windowsHide: true, env: jobEnv() })
 
   const push = (buf: Buffer) => {
     for (const raw of buf.toString().split(/\r?\n/)) {
